@@ -28,11 +28,6 @@ const documentSchema = new Schema({
     type: Date,
     default: null // Timestamp della firma, valorizzato automaticamente
   },
-  signature_data: {
-    type: Types.ObjectId,
-    ref: 'SignatureData',
-    default: null // Riferimento ai dati della firma nel TEE
-  },
   ipfs_hash: {
     type: String,
     trim: true,
