@@ -38,11 +38,10 @@ export function AuthProvider({ children }) {
     try {
       // Chiamata alla tua API Node.js per il login
       const response = await api.post("/token/", { email, password })
-
       const { token, role } = response.data
 
       localStorage.setItem("token", token)
-      this.checkAuth()
+      await checkAuth()
       router.push("/dashboard")
       return { success: true }
     } catch (error) {
