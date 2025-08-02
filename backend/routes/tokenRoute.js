@@ -13,10 +13,11 @@ router
             return res.status(412).json({ message: "Missing data" });
         }
         let user = await UserDB.getUserByEmail(email);
+
         if (!user) {
             return res.status(400).json({ message: "Wrong email or password" });
         }
-        if (await user.comparePassword(passwordInChiaro)) {
+        if (!(await user.comparePassword(password))) {
             return res.status(400).json({ message: "Wrong email or password" });
         }
 

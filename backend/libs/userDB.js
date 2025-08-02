@@ -12,7 +12,17 @@ getterProjection = {
 
 function getUserByEmail(email) { //DO NOT USE FOR ANY ROUTES. ONLY FOR AUTHLIB
     return new Promise(async(resolve, reject) => {
-        const user = await User.findOne({ email: email, deleted: false }).lean()
+        const user = await User.findOne({ email: email })
+            .catch((err) => {
+                return reject(err);
+            });
+        resolve(user);
+    });
+}
+
+function getUserById(id) { //DO NOT USE FOR ANY ROUTES. ONLY FOR AUTHLIB
+    return new Promise(async(resolve, reject) => {
+        const user = await User.findOne({ _id: id })
             .catch((err) => {
                 return reject(err);
             });
@@ -32,6 +42,6 @@ function createUser(info) {
 
 module.exports = {
     getUserByEmail,
+    getUserById,
     createUser,
-    cryptPassword,
 };

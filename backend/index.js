@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const app = express();
+const db = require('./database/conn');  
 const port = process.env.SERVER_PORT || 3000;
 
 //CONFIGURAZIONE INIZIALE DELLE API

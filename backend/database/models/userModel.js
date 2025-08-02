@@ -28,7 +28,6 @@ const userSchema = new Schema({
     type: String,
     required: [true, 'Password is required'],
     minlength: [8, 'Password must be at least 8 characters'],
-    select: false
   },
   role_type: {
     type: Number,
@@ -43,13 +42,11 @@ const userSchema = new Schema({
     type: Types.ObjectId,
     ref: 'Organization',
     required: false,
-    unique: true,
-    sparse: true,
     default: null
   }
 }, {
-  timestamps: { createdAt: 'create_at', updatedAt: 'updated_at' }, //Mongoose fara in modo che noi questi campi non li gestiamo mai a mano, ma se la vede lui per gestire i tempi di quando è stato creato o quando è stato modificato.
-  toJSON: {
+  timestamps: { createdAt: 'create_at', updatedAt: 'updated_at' } //Mongoose fara in modo che noi questi campi non li gestiamo mai a mano, ma se la vede lui per gestire i tempi di quando è stato creato o quando è stato modificato.
+  /*toJSON: {
     transform(doc, ret) {
       delete ret.password;
       return ret;
@@ -60,7 +57,7 @@ const userSchema = new Schema({
       delete ret.password;
       return ret;
     }
-  }
+  }*/
 });
 
 // Pre-save hook to hash password (using bcrypt)

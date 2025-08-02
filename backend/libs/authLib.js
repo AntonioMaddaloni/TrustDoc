@@ -35,6 +35,7 @@ function checkJwt(max = 1000, min = 0) {
             }
             next();
         } catch (error) {
+            console.log(error);
             return res.status(401).json({ message: 'Invalid token' });
         }
     };
