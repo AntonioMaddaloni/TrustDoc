@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
     res.json({ message: 'Hello World !' });
 });
 
-app.use('/esempio', require('./routes/nomeRoute'));
+app.use('/token', require('./routes/tokenRoute'));
 //FINE DICHIARAZIONE DELLE ROTTE
 
 //CONFIGURAZIONE FINALE DELLE API
