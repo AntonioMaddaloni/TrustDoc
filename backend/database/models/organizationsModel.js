@@ -14,7 +14,7 @@ const documentSchema = new Schema({
   created_by: {
     type: Types.ObjectId,
     ref: 'User',
-    required: [true, 'Owner ID is required']
+    required: [true, 'Created_by is required']
   },
  
 }, {
