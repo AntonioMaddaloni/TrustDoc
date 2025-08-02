@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const app = express();
+const db = require('./database/conn');  
 const port = process.env.SERVER_PORT || 3000;
 
 //CONFIGURAZIONE INIZIALE DELLE API
@@ -16,7 +17,8 @@ app.get('/', (req, res) => {
     res.json({ message: 'Hello World !' });
 });
 
-app.use('/esempio', require('./routes/nomeRoute'));
+app.use('/token', require('./routes/tokenRoute'));
+app.use('/user', require('./routes/userRoute'));
 //FINE DICHIARAZIONE DELLE ROTTE
 
 //CONFIGURAZIONE FINALE DELLE API
