@@ -33,15 +33,16 @@ const userSchema = new Schema({
   role_type: {
     type: Number,
     enum: {
-      values: [0, 100, 200],
+      values: [0, 100, 200], // 0 super admin; 100 organization admin; 200 indipendent user;
       message: 'Role type must be 0, 100, or 200'
     },
-    default: 0,
+    default: 200,
     required: true
   },
   organization_id: {
     type: Types.ObjectId,
     ref: 'Organization',
+    required: false,
     unique: true,
     sparse: true,
     default: null

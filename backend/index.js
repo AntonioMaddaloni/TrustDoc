@@ -17,6 +17,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/token', require('./routes/tokenRoute'));
+app.use('/user', require('./routes/userRoute'));
 //FINE DICHIARAZIONE DELLE ROTTE
 
 //CONFIGURAZIONE FINALE DELLE API

@@ -20,6 +20,18 @@ function getUserByEmail(email) { //DO NOT USE FOR ANY ROUTES. ONLY FOR AUTHLIB
     });
 }
 
+function createUser(info) {
+    return new Promise((resolve, reject) => {
+        User.create(info).then((user) => {
+            resolve(user);
+        }).catch((err) => {
+            reject(err);
+        });
+    });
+}
+
 module.exports = {
     getUserByEmail,
+    createUser,
+    cryptPassword,
 };
