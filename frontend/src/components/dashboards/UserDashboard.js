@@ -1,9 +1,9 @@
 "use client"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
+import api from "@/lib/api"
 
 // Componente Placeholder per il gestore PDF (spostato qui per modularità)
 function PdfSigner() {
@@ -11,6 +11,7 @@ function PdfSigner() {
   const [pdfEditorVisible, setPdfEditorVisible] = useState(false)
   const [signatureData, setSignatureData] = useState(null) // Per memorizzare i dati della firma
   const [pdfDataUrl, setPdfDataUrl] = useState(null) // Per memorizzare l'URL del PDF
+  const [isUploading, setIsUploading] = useState(false) // AGGIUNTO: Stato per il caricamento
   const router = useRouter()
 
   const handleFileChange = (event) => {
@@ -46,22 +47,71 @@ function PdfSigner() {
     setPdfEditorVisible(false)
     setSelectedFile(null)
     setPdfDataUrl(null)
-
-    // Se vuoi comunque fare un refresh della pagina, usa:
-    // window.location.reload()
-
-    // Oppure se vuoi andare a una pagina specifica:
-    // router.push("/dashboard")
+    setIsUploading(false) // AGGIUNTO: Reset dello stato di caricamento
   }
 
-  const handleConfirmSignature = () => {
+  const handleConfirmSignature = async () => {
     console.log("Conferma firma e avvia processi")
-    if (signatureData) {
-      alert("Firma confermata! Avvio processi di salvataggio e blockchain.")
-      // Dopo la conferma, potresti voler resettare l'editor
+
+    if (!selectedFile) {
+      alert("Nessun file selezionato.")
+      return
+    }
+
+    // Simula la presenza di una firma (puoi modificare questa logica)
+    if (!signatureData) {
+      // Per ora procediamo comunque, ma potresti voler controllare se c'è effettivamente una firma
+      console.log("Procedendo senza firma specifica...")
+    }
+
+    setIsUploading(true)
+
+    try {
+      // Crea FormData per inviare il file
+      const formData = new FormData()
+      formData.append("pdf", selectedFile)
+
+      // Aggiungi altri dati se necessario
+      if (signatureData) {
+        formData.append("signatureData", JSON.stringify(signatureData))
+      }
+
+      // Aggiungi metadati del file
+      formData.append("fileName", selectedFile.name)
+      formData.append("fileSize", selectedFile.size.toString())
+
+      // Effettua la chiamata API - sostituisci con la tua rotta
+      const response = await api.post("/doc/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        // Opzionale: mostra il progresso dell'upload
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          console.log(`Upload progress: ${percentCompleted}%`)
+        },
+      })
+
+      console.log("Upload successful:", response.data)
+      alert("Firma confermata! Documento caricato con successo.")
+
+      // Resetta l'editor dopo il successo
       handleClearSignature()
-    } else {
-      alert("Nessuna firma rilevata. Per favore, firma il documento.")
+    } catch (error) {
+      console.error("Errore durante l'upload:", error)
+
+      if (error.response) {
+        // Il server ha risposto con un codice di errore
+        alert(`Errore del server: ${error.response.data.message || "Errore sconosciuto"}`)
+      } else if (error.request) {
+        // La richiesta è stata fatta ma non c'è stata risposta
+        alert("Errore di connessione. Controlla la tua connessione internet.")
+      } else {
+        // Qualcos'altro ha causato l'errore
+        alert("Errore durante l'upload del file.")
+      }
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -74,13 +124,19 @@ function PdfSigner() {
       <CardContent>
         {!pdfEditorVisible ? (
           <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg bg-white">
-            <input type="file" accept=".pdf" onChange={handleFileChange} className="mb-4 p-2 border rounded-md" />
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileChange}
+              className="mb-4 p-2 border rounded-md"
+              disabled={isUploading} // AGGIUNTO: Disabilita durante il caricamento
+            />
             {selectedFile && (
               <p className="mb-2 text-gray-700">
                 File selezionato: <strong>{selectedFile.name}</strong>
               </p>
             )}
-            <Button onClick={handleUploadClick} disabled={!selectedFile}>
+            <Button onClick={handleUploadClick} disabled={!selectedFile || isUploading}>
               Carica PDF
             </Button>
             <p className="text-sm text-gray-500 mt-2">Formato: PDF | Dimensioni: [Da definire]</p>
@@ -100,10 +156,12 @@ function PdfSigner() {
               </div>
             </div>
             <div className="flex justify-end space-x-4 mt-6">
-              <Button variant="outline" onClick={handleClearSignature}>
+              <Button variant="outline" onClick={handleClearSignature} disabled={isUploading}>
                 Cancella
               </Button>
-              <Button onClick={handleConfirmSignature}>Conferma Firma</Button>
+              <Button onClick={handleConfirmSignature} disabled={isUploading}>
+                {isUploading ? "Caricamento..." : "Conferma Firma"}
+              </Button>
             </div>
           </div>
         )}
