@@ -1,7 +1,9 @@
 "use client"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
 
 // Componente Placeholder per il gestore PDF (spostato qui per modularità)
 function PdfSigner() {
@@ -9,16 +11,16 @@ function PdfSigner() {
   const [pdfEditorVisible, setPdfEditorVisible] = useState(false)
   const [signatureData, setSignatureData] = useState(null) // Per memorizzare i dati della firma
   const [pdfDataUrl, setPdfDataUrl] = useState(null) // Per memorizzare l'URL del PDF
+  const router = useRouter()
 
   const handleFileChange = (event) => {
     const file = event.target.files[0]
     if (file && file.type === "application/pdf") {
       setSelectedFile(file)
-
       // Converti il file in data URL per la visualizzazione
       const reader = new FileReader()
       reader.onload = (e) => {
-        setPdfDataUrl(e.target.result) //Una volta che pdfDataUrl è valorizzato, viene renderizzato l'<iframe> con src={pdfDataUrl}, mostrando il PDF direttamente nel browser.
+        setPdfDataUrl(e.target.result)
       }
       reader.readAsDataURL(file)
     } else {
@@ -39,19 +41,25 @@ function PdfSigner() {
 
   const handleClearSignature = () => {
     console.log("Cancella firma e resetta editor")
+    // Resetta tutti gli stati invece di fare redirect
     setSignatureData(null)
-    // Dovrai richiamare un metodo dall'editor PDF per cancellare la firma
+    setPdfEditorVisible(false)
+    setSelectedFile(null)
+    setPdfDataUrl(null)
+
+    // Se vuoi comunque fare un refresh della pagina, usa:
+    // window.location.reload()
+
+    // Oppure se vuoi andare a una pagina specifica:
+    // router.push("/dashboard")
   }
 
   const handleConfirmSignature = () => {
     console.log("Conferma firma e avvia processi")
     if (signatureData) {
-      // Qui invierai i dati della firma e il PDF modificato ai vari servizi:
-      // 1. Salvataggio PDF modificato
-      // 2. Firma tramite TEE (Trusted Execution Environment)
-      // 3. Upload su IPFS
-      // 4. Scrittura su Ethereum
       alert("Firma confermata! Avvio processi di salvataggio e blockchain.")
+      // Dopo la conferma, potresti voler resettare l'editor
+      handleClearSignature()
     } else {
       alert("Nessuna firma rilevata. Per favore, firma il documento.")
     }
@@ -93,7 +101,7 @@ function PdfSigner() {
             </div>
             <div className="flex justify-end space-x-4 mt-6">
               <Button variant="outline" onClick={handleClearSignature}>
-                Cancella Firma
+                Cancella
               </Button>
               <Button onClick={handleConfirmSignature}>Conferma Firma</Button>
             </div>
@@ -129,14 +137,12 @@ export default function IndependentUserDashboard({ user }) {
             <div className="bg-green-50 p-6 rounded-lg">
               <h3 className="text-lg font-medium text-green-900">I Miei Documenti</h3>
               <p className="text-green-700 mt-2">Qui potrai trovare tutti i documenti che hai caricato o firmato.</p>
-              {/* Qui potresti aggiungere una lista di documenti recenti o un link alla sezione documenti */}
             </div>
             <div className="bg-purple-50 p-6 rounded-lg">
               <h3 className="text-lg font-medium text-purple-900">Notifiche Recenti</h3>
               <p className="text-purple-700 mt-2">Le tue notifiche e avvisi recenti appariranno qui.</p>
             </div>
           </div>
-          {/* Inserisci il componente PdfSigner qui sotto gli altri box */}
           <PdfSigner />
         </CardContent>
       </Card>
