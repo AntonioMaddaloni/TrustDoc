@@ -173,7 +173,7 @@ router
       });
     }
   })
-  .delete("(/fisical/:cid", authLib(200), async (req, res) => {
+  .delete("(/fisical/{cid}", authLib(200), async (req, res) => {
     try {
       const { cid } = req.params;
       const ipfsClient = await initIPFS();
