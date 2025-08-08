@@ -43,7 +43,7 @@ sign:
 	oesign sign -e enclave -c trustdoc.conf -k private.pem
 
 clean:
-	rm -f enc.o enclave enclave.signed private.pem public.pem trustdoc_t.o trustdoc_t.h trustdoc_t.c trustdoc_args.h
+	rm -f enc.o enclave enclave.signed private.pem public.pem trustdoc_t.o trustdoc_t.h trustdoc_t.c _args.h
 
 keys:
 	openssl genrsa -out private.pem -3 3072
