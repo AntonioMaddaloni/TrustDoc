@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const docInsertValidator = require("../validators/docInsertValidator");
 const TeeService = require('../libs/TeeService');
+const path = require('path');
 
 // Carica variabili d'ambiente
 require('dotenv').config();
@@ -24,7 +25,7 @@ const initIPFS = async () => {
 
 //Configurazione TEE
 const teeService = new TeeService({
-  hostPath: '../../openenclave/enclave/host/trustdoc_host', // Percorso al tuo executable
+  hostPath: path.resolve('../../openenclave/enclave/host/trustdoc_host'), // Percorso al tuo executable
   simulate: true, // true per sviluppo, false per produzione
   useWsl: true, // true su Windows, false su Linux
   timeout: 30000 // 30 secondi timeout

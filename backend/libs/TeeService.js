@@ -3,7 +3,7 @@ const path = require('path');
 
 class TeeService {
   constructor(options = {}) {
-    this.hostPath = options.hostPath || './trustdoc_host';
+    this.hostPath = options.hostPath || path.resolve('../../openenclave/enclave/host/trustdoc_host');
     this.simulate = options.simulate !== false; // Default true
     this.useWsl = options.useWsl !== false; // Default true per Windows
     this.timeout = options.timeout || 30000; // 30 secondi timeout
