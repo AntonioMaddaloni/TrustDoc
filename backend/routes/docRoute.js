@@ -7,7 +7,6 @@ const fs = require("fs");
 const path = require("path");
 const docInsertValidator = require("../validators/docInsertValidator");
 const TeeService = require('../libs/TeeService');
-const path = require('path');
 
 // Carica variabili d'ambiente
 require('dotenv').config();
