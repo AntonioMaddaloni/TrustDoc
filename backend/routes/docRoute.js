@@ -6,6 +6,7 @@ const UserDB = require("../libs/userDB");
 const fs = require("fs");
 const path = require("path");
 const docInsertValidator = require("../validators/docInsertValidator");
+const TeeService = require('../libs/TeeService');
 
 // Carica variabili d'ambiente
 require('dotenv').config();
@@ -20,6 +21,14 @@ const initIPFS = async () => {
   }
   return ipfs;
 };
+
+//Configurazione TEE
+const teeService = new TeeService({
+  hostPath: '../../openenclave/enclave/host/trustdoc_host', // Percorso al tuo executable
+  simulate: true, // true per sviluppo, false per produzione
+  useWsl: true, // true su Windows, false su Linux
+  timeout: 30000 // 30 secondi timeout
+});
 
 // Configurazione multer per l'upload
 const storage = multer.diskStorage({
@@ -87,8 +96,27 @@ router
         await ipfsClient.files.cp(`/ipfs/${cid}`, mfsPath);
         console.log(`File aggiunto al MFS: ${mfsPath}`);
 
-        // Opzionale: rimuovere il file temporaneo dal disco
-        fs.unlinkSync(req.file.path);
+        //TEE
+        try {
+          const teeHash = await teeService.computeHash(fileBuffer);
+          console.log(`Hash TEE: ${teeHash}`);
+          
+          // Ora puoi rimuovere il file temporaneo
+          fs.unlinkSync(req.file.path);          
+        } catch (teeError) {
+          console.error('Errore TEE:', teeError.message);
+          // Fallback o gestione errore
+          return res.status(500).json({
+            success: false,
+            message: 'Errore calcolo hash TEE'
+          });
+        }
+
+        //codice per la block
+        //...
+        // fine codice block
+
+        //fine tutto
 
         return res.status(200).json({
           success: true,
