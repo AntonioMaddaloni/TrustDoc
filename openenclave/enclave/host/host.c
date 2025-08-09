@@ -22,7 +22,7 @@ int main(int argc, const char* argv[])
 
     // Crea enclave
     result = oe_create_trustdoc_enclave(
-        "enclave.signed", OE_ENCLAVE_TYPE_AUTO, flags, NULL, 0, &enclave);
+        "../enclave/enclave.signed", OE_ENCLAVE_TYPE_AUTO, flags, NULL, 0, &enclave);
     if (result != OE_OK) {
         fprintf(stderr, "Failed to create enclave: %s\n", oe_result_str(result));
         return 1;
