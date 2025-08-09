@@ -25,7 +25,6 @@ const initIPFS = async () => {
 
 //Configurazione TEE
 const teeService = new TeeService({
-  hostPath: path.resolve('../../openenclave/enclave/host/trustdoc_host'), // Percorso al tuo executable
   simulate: true, // true per sviluppo, false per produzione
   useWsl: true, // true su Windows, false su Linux
   timeout: 30000 // 30 secondi timeout
