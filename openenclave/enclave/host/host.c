@@ -12,12 +12,38 @@ int main(int argc, const char* argv[])
     uint8_t* buffer = NULL;
     size_t total_size = 0;
     size_t capacity = 4096; // Inizia con 4KB
+    const char* file_path = NULL;
+    int simulate = 0;
 
-    // Verifica argomenti
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <file_path|-> \n", argv[0]);
+    // Parse argomenti
+    if (argc < 2 || argc > 3) {
+        fprintf(stderr, "Usage: %s [--simulate] <file_path|->\n", argv[0]);
+        fprintf(stderr, "       %s <file_path|-> [--simulate]\n", argv[0]);
         fprintf(stderr, "Use '-' to read from stdin\n");
         return 1;
+    }
+
+    // Gestisci argomenti in qualsiasi ordine
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--simulate") == 0) {
+            simulate = 1;
+        } else {
+            if (file_path == NULL) {
+                file_path = argv[i];
+            } else {
+                fprintf(stderr, "Error: Multiple file paths specified\n");
+                return 1;
+            }
+        }
+    }
+
+    if (file_path == NULL) {
+        fprintf(stderr, "Error: No file path specified\n");
+        return 1;
+    }
+
+    if (simulate) {
+        flags |= OE_ENCLAVE_FLAG_SIMULATE;
     }
 
     // Crea enclave
@@ -29,7 +55,7 @@ int main(int argc, const char* argv[])
     }
 
     // Determina se leggere da file o da stdin
-    if (strcmp(argv[1], "-") == 0) {
+    if (strcmp(file_path, "-") == 0) {
         // Leggi da stdin
         buffer = malloc(capacity);
         if (!buffer) {
@@ -65,9 +91,9 @@ int main(int argc, const char* argv[])
 
     } else {
         // Leggi da file
-        FILE* file = fopen(argv[1], "rb");
+        FILE* file = fopen(file_path, "rb");
         if (!file) {
-            fprintf(stderr, "Cannot open file: %s\n", argv[1]);
+            fprintf(stderr, "Cannot open file: %s\n", file_path);
             oe_terminate_enclave(enclave);
             return 1;
         }
