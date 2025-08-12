@@ -3,10 +3,12 @@ const router = express.Router();
 const multer = require("multer");
 const authLib = require("../libs/authLib");
 const UserDB = require("../libs/userDB");
+const DocumentDB = require("../libs/documentDB");
 const fs = require("fs");
 const path = require("path");
 const docInsertValidator = require("../validators/docInsertValidator");
 const TeeService = require('../libs/TeeService');
+const { blockchainService } = require('../libs/BlockchainService'); 
 
 // Carica variabili d'ambiente
 require('dotenv').config();
@@ -59,75 +61,52 @@ const upload = multer({
 router.use(express.json());
 
 router
-  .post("/",authLib(200), upload.single("pdf"), docInsertValidator, async (req, res) => {
+  .post("/", authLib(200), upload.single("pdf"), docInsertValidator, async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'Nessun file caricato' });
+      }
+
+      // Inizializza IPFS client
+      const ipfsClient = await initIPFS();
+
+      // Aggiunta del file a IPFS
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const result = await ipfsClient.add(fileBuffer);
+      const cid = result.cid.toString();
+
+      // Pinna il file per mantenerlo nel nodo locale
+      await ipfsClient.pin.add(cid);
+      console.log(`File pinnato con CID: ${cid}`);
+
+      // Aggiungi il file al MFS (Mutable File System) per vederlo in IPFS Desktop
+      const fileName = req.file.originalname || `pdf-${Date.now()}.pdf`;
+      const mfsPath = `/uploaded-pdfs/${fileName}`;
+      
+      // Crea la directory se non esiste
       try {
-        if (!req.file) {
-          return res.status(400).json({ error: 'Nessun file caricato' });
-        }
-
-        // Inizializza IPFS client
-        const ipfsClient = await initIPFS();
-
-        // Aggiunta del file a IPFS
-        const fileBuffer = fs.readFileSync(req.file.path);
-        const result = await ipfsClient.add(fileBuffer);
-        const cid = result.cid.toString();
-
-        // Pinna il file per mantenerlo nel nodo locale
-        await ipfsClient.pin.add(cid);
-        console.log(`File pinnato con CID: ${cid}`);
-
-        // Aggiungi il file al MFS (Mutable File System) per vederlo in IPFS Desktop
-        const fileName = req.file.originalname || `pdf-${Date.now()}.pdf`;
-        const mfsPath = `/uploaded-pdfs/${fileName}`;
-        
-        // Crea la directory se non esiste
-        try {
-          await ipfsClient.files.mkdir('/uploaded-pdfs', { parents: true });
-        } catch (err) {
-          // Directory già esistente, ignora l'errore
-          if (!err.message.includes('file already exists')) {
-            console.warn('Errore creazione directory:', err.message);
-          }
-        }
-
-        // Copia il file nel MFS
-        await ipfsClient.files.cp(`/ipfs/${cid}`, mfsPath);
-        console.log(`File aggiunto al MFS: ${mfsPath}`);
-
-        //TEE
-        try {
-          const teeHash = await teeService.computeHash(fileBuffer);
-          console.log(`Hash TEE: ${teeHash}`);
-          
-          // Ora puoi rimuovere il file temporaneo
-          fs.unlinkSync(req.file.path);          
-        } catch (teeError) {
-          console.error('Errore TEE:', teeError.message);
-          // Fallback o gestione errore
-          return res.status(500).json({
-            success: false,
-            message: 'Errore calcolo hash TEE'
-          });
-        }
-
-        //codice per la block
-        //...
-        // fine codice block
-
-        //fine tutto
-
-        return res.status(200).json({
-          success: true,
-          message: "PDF caricato su IPFS con successo!",
-          data: {
-            cid,
-            size: result.size,
-            url: `${process.env.IPFS_GATEWAY_URL || 'http://127.0.0.1:8080/ipfs'}/${cid}`
-          },
-        });
+        await ipfsClient.files.mkdir('/uploaded-pdfs', { parents: true });
       } catch (err) {
-        console.error('Errore IPFS add:', err);
+        // Directory già esistente, ignora l'errore
+        if (!err.message.includes('file already exists')) {
+          console.warn('Errore creazione directory:', err.message);
+        }
+      }
+
+      // Copia il file nel MFS
+      await ipfsClient.files.cp(`/ipfs/${cid}`, mfsPath);
+      console.log(`File aggiunto al MFS: ${mfsPath}`);
+
+      // TEE
+      let teeHash;
+      try {
+        teeHash = await teeService.computeHash(fileBuffer);
+        console.log(`Hash TEE: ${teeHash}`);
+        
+        // Ora puoi rimuovere il file temporaneo
+        fs.unlinkSync(req.file.path);          
+      } catch (teeError) {
+        console.error('Errore TEE:', teeError.message);
         // Cleanup in caso di errore
         if (req.file && req.file.path) {
           try {
@@ -138,12 +117,177 @@ router
         }
         return res.status(500).json({
           success: false,
-          message: err.message || 'Errore caricamento su IPFS'
+          message: 'Errore calcolo hash TEE'
         });
       }
+
+      // 🔗 CODICE PER LA BLOCKCHAIN
+      let blockchainResult = null;
+      try {
+        // Inizializza il servizio blockchain se non già fatto
+        if (!blockchainService.initialized) {
+          await blockchainService.initialize();
+        }
+
+        // Memorizza il documento sulla blockchain
+        blockchainResult = await blockchainService.storeDocument(
+          fileName,
+          result.size,
+          teeHash
+        );
+
+        console.log('✅ Documento memorizzato sulla blockchain:', blockchainResult);
+
+      } catch (blockchainError) {
+        console.error('❌ Errore blockchain:', blockchainError.message);
+        
+        // Decidi se vuoi che l'errore blockchain blocchi tutto l'upload
+        // Opzione 1: Blocca tutto (più sicuro)
+        return res.status(500).json({
+          success: false,
+          message: `Errore memorizzazione blockchain: ${blockchainError.message}`,
+          partialData: {
+            ipfs: {
+              cid,
+              size: result.size
+            },
+            teeHash
+          }
+        });
+      }
+
+      // 💾 SALVATAGGIO NEL DATABASE LOCALE
+      let databaseResult = null;
+      try {
+        // Prepara i dati per il database
+        const documentInfo = {
+          // Dati base
+          title: req.body.title || fileName, // Titolo dal body o usa il filename
+          filename: fileName,
+          owner_id: req.user?.id || null, // ID dell'utente autenticato
+          
+          // Status iniziali
+          signed: false, // Documento non ancora firmato
+          signed_at: null,
+          revoked: false, // Non revocato
+          revoked_at: null,
+          deleted: false, // Non eliminato
+          
+          // Hashes e riferimenti
+          ipfs_hash: cid, // CID di IPFS
+          blockchain_id: blockchainResult.documentId, // ID dalla blockchain
+          tee_hash: teeHash, // Hash TEE
+          
+          // Timestamps automatici (se il tuo ORM li gestisce automaticamente, puoi omettere)
+          create_at: new Date(),
+          updateted_at: new Date()
+        };
+
+        // Salva nel database
+        databaseResult = await createDocument(documentInfo);
+        
+        console.log('✅ Documento salvato nel database:', databaseResult.id);
+
+      } catch (databaseError) {
+        console.error('❌ Errore database:', databaseError.message);
+        
+        // In caso di errore database, potresti voler:
+        // 1. Fare rollback della blockchain (difficile)
+        // 2. Salvare in una tabella di retry per processare dopo
+        // 3. Restituire successo parziale con warning
+        
+        // Opzione: Successo parziale con warning
+        return res.status(207).json({ // 207 = Multi-Status
+          success: true,
+          warning: 'Documento memorizzato su IPFS e blockchain, ma errore nel database locale',
+          message: "Caricamento completato con warning",
+          data: {
+            ipfs: {
+              cid,
+              size: result.size,
+              url: `${process.env.IPFS_GATEWAY_URL || 'http://127.0.0.1:8080/ipfs'}/${cid}`,
+              mfsPath
+            },
+            tee: {
+              hash: teeHash
+            },
+            blockchain: {
+              documentId: blockchainResult.documentId,
+              transactionHash: blockchainResult.transactionHash,
+              blockNumber: blockchainResult.blockNumber,
+              gasUsed: blockchainResult.gasUsed
+            },
+            database: {
+              error: databaseError.message,
+              retry: true
+            },
+            metadata: {
+              fileName,
+              originalName: req.file.originalname,
+              uploadedAt: new Date().toISOString()
+            }
+          }
+        });
+      }
+
+      // 🎉 SUCCESSO COMPLETO - Tutto è andato bene
+      return res.status(200).json({
+        success: true,
+        message: "PDF caricato e memorizzato con successo su tutti i sistemi!",
+        data: {
+          // Dati IPFS
+          ipfs: {
+            cid,
+            size: result.size,
+            url: `${process.env.IPFS_GATEWAY_URL || 'http://127.0.0.1:8080/ipfs'}/${cid}`,
+            mfsPath
+          },
+          // Dati TEE
+          tee: {
+            hash: teeHash
+          },
+          // Dati Blockchain
+          blockchain: {
+            documentId: blockchainResult.documentId,
+            transactionHash: blockchainResult.transactionHash,
+            blockNumber: blockchainResult.blockNumber,
+            gasUsed: blockchainResult.gasUsed
+          },
+          // Dati Database
+          database: {
+            id: databaseResult.id,
+            createdAt: databaseResult.createdAt
+          },
+          // Metadata generali
+          metadata: {
+            fileName,
+            originalName: req.file.originalname,
+            uploadedAt: new Date().toISOString()
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Errore generale:', error);
+      
+      // Cleanup in caso di errore generale
+      if (req.file && req.file.path) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (cleanupError) {
+          console.error('Errore cleanup finale:', cleanupError);
+        }
+      }
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Errore interno del server',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Errore interno'
+      });
     }
-  )
-  .get("/files", authLib(200), async (req, res) => {
+  })
+
+.get("/files", authLib(200), async (req, res) => {
     try {
       const ipfsClient = await initIPFS();
       const files = [];
