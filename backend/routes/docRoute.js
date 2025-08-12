@@ -184,7 +184,7 @@ router
         };
 
         // Salva nel database
-        databaseResult = await createDocument(documentInfo);
+        databaseResult = await DocumentDB.createDocument(documentInfo);
         
         console.log('✅ Documento salvato nel database:', databaseResult.id);
 
