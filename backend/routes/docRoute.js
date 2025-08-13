@@ -191,12 +191,7 @@ router
       } catch (databaseError) {
         console.error('❌ Errore database:', databaseError.message);
         
-        // In caso di errore database, potresti voler:
-        // 1. Fare rollback della blockchain (difficile)
-        // 2. Salvare in una tabella di retry per processare dopo
-        // 3. Restituire successo parziale con warning
-        
-        // Opzione: Successo parziale con warning
+        // Successo parziale con warning
         return res.status(207).json({ // 207 = Multi-Status
           success: true,
           warning: 'Documento memorizzato su IPFS e blockchain, ma errore nel database locale',

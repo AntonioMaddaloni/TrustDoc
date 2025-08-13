@@ -5,11 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useRouter } from "next/navigation"
 import api from "@/lib/api"
 
-// Aggiungi questo script per pdf-lib nel tuo progetto:
-// npm install pdf-lib
-// Oppure aggiungi questo script tag nel tuo HTML:
-// <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-
 function PdfSigner() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [pdfEditorVisible, setPdfEditorVisible] = useState(false)
@@ -330,7 +325,7 @@ function PdfSigner() {
 
       console.log("Invio del PDF firmato al backend...")
 
-      // Effettua la chiamata API per caricare su IPFS
+      // Effettua la chiamata API
       const response = await api.post("/doc/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -342,7 +337,7 @@ function PdfSigner() {
       })
 
       console.log("Upload successful:", response.data)
-      alert(`PDF firmato caricato con successo su IPFS! Hash: ${response.data.ipfsHash || response.data.hash || 'N/A'}`)
+      alert(`PDF firmato caricato con successo!`)
       
       // Resetta l'editor dopo il successo
       handleClearSignature()
@@ -379,10 +374,9 @@ function PdfSigner() {
       <CardHeader>
         <CardTitle>Carica e Firma Documento PDF</CardTitle>
         <CardDescription>
-          Carica un documento PDF, apponi la tua firma digitale e caricalo su IPFS. 
+          Carica un documento PDF, apponi la tua firma digitale e caricalo in modo del tutto Sicuro!. 
           <br />
           <small className="text-xs text-orange-600">
-            ⚠️ Assicurati di aver installato pdf-lib: npm install pdf-lib
           </small>
         </CardDescription>
       </CardHeader>
@@ -494,7 +488,7 @@ function PdfSigner() {
                       Dimensioni: {Math.round(signatureCoordinates.width)}x{Math.round(signatureCoordinates.height)}px
                     </p>
                     <p className="text-xs text-blue-600 mt-1">
-                      🎯 Il PDF firmato sarà generato nel browser e caricato su IPFS
+                      🎯 Il PDF firmato sarà generato nel browser e caricato in modo sicuro.
                     </p>
                   </div>
                 )}
@@ -513,7 +507,7 @@ function PdfSigner() {
                   disabled={isUploading || !signatureData}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  {isUploading ? "Creazione PDF e caricamento su IPFS..." : "Firma e Carica su IPFS"}
+                  {isUploading ? "Creazione PDF e caricamento..." : "Firma e Carica"}
                 </Button>
               </div>
             </div>
