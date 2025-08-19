@@ -30,7 +30,7 @@
     |
     | 5) Invoca calcolo e firma in ambiente sicuro
     v
-[ TEE (Hyperledger Avalon) ]
+[ TEE (OpenEnclave Avalon) ]
     |  (firma digitale, hash, proof)
     |
     | 6) Invio hash + firma + timestamp a
@@ -117,9 +117,9 @@ Dopo il caricamento:
 Ogni documento caricato sarà visibile con le seguenti opzioni:
 
 - `Download`: scarica PDF firmato
-- `Revoca`: revoca certificato via blockchain
+- `Revoca`: revoca certificato via blockchain (NON PER UTENTI INMDIPENDENTI)
 - `Eliminazione`: rimuove documento dall'interfaccia e dal DB locale
-- `Revoca + Eliminazione`: combina entrambe le azioni
+- `Revoca + Eliminazione`: combina entrambe le azioni (NON PER UTENTI INMDIPENDENTI)
 
 > ⚠️ La **revoca senza eliminazione** è utile per tracciare certificati invalidati a fini legali/amministrativi.
 
@@ -185,7 +185,7 @@ Gestisce la **propria** organizzazione:
 | Database           | MongoDB                   |
 | Blockchain         | Ethereum (Smart Contracts)|
 | Storage distribuito| IPFS                      |
-| Sicurezza Firma    | TEE (es. Hyperledger Avalon) |
+| Sicurezza Firma    | TEE (es. OpenEnclave) |
 | Autenticazione     | JWT + Bcrypt              |
 
 ---
