@@ -20,6 +20,16 @@ function getUserByEmail(email) { //DO NOT USE FOR ANY ROUTES. ONLY FOR AUTHLIB
     });
 }
 
+function getUsersByOrganization(organization) {
+    return new Promise(async(resolve, reject) => {
+        const users = await User.find({ organization_id: organization })
+            .catch((err) => {
+                return reject(err);
+            });
+        resolve(users);
+    });
+}
+
 function getUserById(id) { //DO NOT USE FOR ANY ROUTES. ONLY FOR AUTHLIB
     return new Promise(async(resolve, reject) => {
         const user = await User.findOne({ _id: id })
@@ -42,6 +52,7 @@ function createUser(info) {
 
 module.exports = {
     getUserByEmail,
+    getUsersByOrganization,
     getUserById,
     createUser,
 };

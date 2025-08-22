@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { resolve } = require('path');
 const Document = require('../database/models/documentModel');
+
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -24,6 +25,27 @@ function getMyDocuments(myid) {
         resolve(docs);
     });
 }
+
+function getDocumentsByMyOrganizationUser(users) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Estrai gli _id degli utenti
+            const userIds = users.map(user => user._id);
+
+            // Trova tutti i documenti con owner_id tra gli userIds e non cancellati
+            const docs = await Document.find({
+                deleted: false,
+                owner_id: { $in: userIds }
+            });
+
+            resolve(docs);
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
+
 function createDocument(info) {
     return new Promise((resolve, reject) => {
         Document.create(info).then((doc) => {
@@ -37,5 +59,6 @@ function createDocument(info) {
 module.exports = {
     getDocumentById,
     getMyDocuments,
+    getDocumentsByMyOrganizationUser,
     createDocument
 };

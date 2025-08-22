@@ -434,6 +434,30 @@ router
         message: err.message
       });
     }
+  })
+  .get('/myorganization', authLib(100), async (req, res) => { //solo gli admin di un organizzaizone possono accedere a questa rotta
+    try{
+      if(!req.user.organization_id)
+      {
+        res.status(404).json({
+          success: false,
+          message: "Non sei assegnato ad alcuna organizzazione"
+        });
+      }
+      let users = await UserDB.getUsersByOrganization(req.user.organization_id);
+      let docs = await DocumentDB.getDocumentsByMyOrganizationUser(users);
+      return res.status(200).json({
+        success: true,
+        message: "I Documenti della mia organizzazione sono stati ritornati con successo",
+        data: docs
+      });
+    }catch(err) {
+      console.error('Errore get miei dati:', err);
+      res.status(500).json({
+        success: false,
+        message: err.message
+      });
+    }
   });
 
 // Endpoint per verificare lo stato del nodo IPFS
