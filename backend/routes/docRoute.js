@@ -418,6 +418,22 @@ router
         message: err.message
       });
     }
+  })
+  .get('/my', authLib(), async (req, res) => { //tutti lo possono fare, infatti posso prendere solo i miei di documenti, quindi non serve una restrizione, ma solo autenticazione
+    try{
+      let docs = await DocumentDB.getMyDocuments(req.user._id);
+      return res.status(200).json({
+        success: true,
+        message: "Miei Documenti ritornati con successo",
+        data: docs
+      });
+    }catch(err) {
+      console.error('Errore get miei dati:', err);
+      res.status(500).json({
+        success: false,
+        message: err.message
+      });
+    }
   });
 
 // Endpoint per verificare lo stato del nodo IPFS
