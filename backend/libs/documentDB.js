@@ -56,9 +56,21 @@ function createDocument(info) {
     });
 }
 
+function deleteDocument(id) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const result = await Document.deleteOne({ _id: id });
+            resolve(result.deletedCount > 0);
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
 module.exports = {
     getDocumentById,
-    getMyDocuments,
+    getMyDocuments, 
     getDocumentsByMyOrganizationUser,
-    createDocument
+    createDocument,
+    deleteDocument
 };

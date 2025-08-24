@@ -87,11 +87,6 @@ export default function DocumentCard({ document, user, onDelete }) {
     window.open(`/api/documents/download/${document._id}`, '_blank');
   };
 
-  // Funzione per visualizzare il documento (se è un PDF)
-  const handleView = () => {
-    // Assumendo che il backend abbia un endpoint per la visualizzazione
-    window.open(`/api/documents/view/${document._id}`, '_blank');
-  };
 
   return (
     <Card className="hover:shadow-lg transition-shadow duration-200">
@@ -163,14 +158,6 @@ export default function DocumentCard({ document, user, onDelete }) {
         {/* Azioni */}
         <div className="flex justify-between items-center mt-4 pt-4 border-t">
           <div className="flex space-x-2">
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={handleView}
-              className="text-blue-600 hover:text-blue-700"
-            >
-              Visualizza
-            </Button>
             <Button 
               size="sm" 
               variant="outline"

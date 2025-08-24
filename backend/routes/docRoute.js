@@ -419,6 +419,204 @@ router
       });
     }
   })
+
+  // NUOVA ROTTA DELETE COMPLETA PER DOCUMENTI
+  .delete('/delete/:id', authLib(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user._id.toString();
+      const userRole = req.user.role_type;
+      
+      console.log(`Richiesta eliminazione completa documento ${id} da utente ${userId} (ruolo: ${userRole})`);
+   
+      
+      // Validazione ID
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID documento non fornito'
+        });
+      }
+      
+      // Trova il documento nel database
+      const document = await DocumentDB.getDocumentById(id);
+      
+        console.log('=== DEBUG OWNERSHIP ===');
+        console.log('req.user:', req.user);
+        console.log('userId ricavato:', req.user?.id || req.user?._id);
+        console.log('document.owner_id:', document.owner_id);
+        console.log('Tipi:', typeof document.owner_id, 'vs', typeof (req.user?.id || req.user?._id));
+        console.log('Confronto strict:', document.owner_id === (req.user?.id || req.user?._id));
+        console.log('Confronto loose:', document.owner_id == (req.user?.id || req.user?._id));
+
+      if (!document) {
+        return res.status(404).json({
+          success: false,
+          message: 'Documento non trovato'
+        });
+      }
+      
+      // VERIFICA PERMESSI - Solo Independent User può eliminare i propri documenti
+      if (userRole === 0 || userRole === 100) {
+        return res.status(403).json({
+          success: false,
+          message: 'Gli amministratori non possono eliminare documenti. Solo gli utenti indipendenti possono eliminare i propri documenti.'
+        });
+      }
+      
+      // Verifica che sia il proprietario del documento
+      if (document.owner_id.toString() !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Puoi eliminare solo i tuoi documenti'
+        });
+      }
+      
+      console.log(`Permessi verificati per documento: ${document.filename}`);
+      
+      // Risultati delle eliminazioni
+      const deletionResults = {
+        database: false,
+        ipfs: false,
+        blockchain: false,
+        errors: []
+      };
+      
+      // 1. ELIMINAZIONE DAL DATABASE
+      try {
+        console.log('Eliminazione dal database...');
+        const dbResult = await DocumentDB.deleteDocument(id);
+        deletionResults.database = !!dbResult;
+        console.log(`Database: ${deletionResults.database ? 'SUCCESS' : 'FAILED'}`);
+      } catch (dbError) {
+        console.error('Errore database:', dbError.message);
+        deletionResults.errors.push(`Database: ${dbError.message}`);
+      }
+      
+      // 2. ELIMINAZIONE DA IPFS
+      if (document.ipfs_hash) {
+        try {
+          console.log(`Eliminazione da IPFS (CID: ${document.ipfs_hash})...`);
+          const ipfsClient = await initIPFS();
+          
+          // Unpin il file
+          await ipfsClient.pin.rm(document.ipfs_hash);
+          console.log(`File unpinned: ${document.ipfs_hash}`);
+          
+          // Rimuovi dal MFS se presente
+          try {
+            const files = ipfsClient.files.ls('/uploaded-pdfs');
+            for await (const file of files) {
+              if (file.cid.toString() === document.ipfs_hash) {
+                await ipfsClient.files.rm(`/uploaded-pdfs/${file.name}`);
+                console.log(`File rimosso dal MFS: ${file.name}`);
+                break;
+              }
+            }
+          } catch (mfsError) {
+            console.log('File non trovato nel MFS');
+          }
+          
+          // Garbage collection
+          await ipfsClient.repo.gc();
+          console.log('Garbage collection completata');
+          
+          deletionResults.ipfs = true;
+          console.log('IPFS: SUCCESS');
+          
+        } catch (ipfsError) {
+          console.error('Errore IPFS:', ipfsError.message);
+          deletionResults.errors.push(`IPFS: ${ipfsError.message}`);
+        }
+      } else {
+        deletionResults.ipfs = true; // Nessun hash IPFS da eliminare
+        console.log('IPFS: Nessun hash da eliminare');
+      }
+      
+      // 3. SOFT DELETE DALLA BLOCKCHAIN
+      if (document.blockchain_id) {
+        try {
+          console.log(`Soft delete dalla blockchain (ID: ${document.blockchain_id})...`);
+          
+          // Inizializza il servizio blockchain
+          if (!blockchainService.initialized) {
+            await blockchainService.initialize();
+          }
+          
+          // Soft delete del documento sulla blockchain
+          const blockchainResult = await blockchainService.softDeleteDocument(document.blockchain_id);
+          
+          deletionResults.blockchain = blockchainResult.success;
+          console.log('Blockchain: SUCCESS', blockchainResult);
+          
+        } catch (blockchainError) {
+          console.error('Errore Blockchain:', blockchainError.message);
+          deletionResults.errors.push(`Blockchain: ${blockchainError.message}`);
+        }
+      } else {
+        deletionResults.blockchain = true; // Nessun ID blockchain da eliminare
+        console.log('Blockchain: Nessun ID da eliminare');
+      }
+      
+      // RISPOSTA FINALE
+      const allSuccess = deletionResults.database && deletionResults.ipfs && deletionResults.blockchain;
+      const successCount = [deletionResults.database, deletionResults.ipfs, deletionResults.blockchain].filter(Boolean).length;
+      
+      if (allSuccess) {
+        console.log('Eliminazione completa riuscita!');
+        return res.json({
+          success: true,
+          message: 'Documento eliminato completamente da tutti i sistemi',
+          data: {
+            documentId: id,
+            fileName: document.filename,
+            deletedFrom: ['database', 'ipfs', 'blockchain'],
+            details: deletionResults
+          }
+        });
+      } else if (successCount > 0) {
+        console.log(`Eliminazione parziale: ${successCount}/3 sistemi`);
+        return res.status(207).json({ // 207 Multi-Status
+          success: false,
+          message: `Eliminazione parziale completata (${successCount}/3 sistemi)`,
+          data: {
+            documentId: id,
+            fileName: document.filename,
+            deletedFrom: [
+              deletionResults.database ? 'database' : null,
+              deletionResults.ipfs ? 'ipfs' : null,
+              deletionResults.blockchain ? 'blockchain' : null
+            ].filter(Boolean),
+            details: deletionResults,
+            errors: deletionResults.errors
+          }
+        });
+      } else {
+        console.log('Eliminazione fallita completamente');
+        return res.status(500).json({
+          success: false,
+          message: 'Eliminazione fallita su tutti i sistemi',
+          data: {
+            documentId: id,
+            fileName: document.filename,
+            deletedFrom: [],
+            details: deletionResults,
+            errors: deletionResults.errors
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.error('Errore generale eliminazione documento:', error);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Errore interno del server durante l\'eliminazione',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  })
+
   .get('/my', authLib(), async (req, res) => { //tutti lo possono fare, infatti posso prendere solo i miei di documenti, quindi non serve una restrizione, ma solo autenticazione
     try{
       let docs = await DocumentDB.getMyDocuments(req.user._id);
