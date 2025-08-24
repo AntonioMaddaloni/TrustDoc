@@ -519,6 +519,7 @@ function PdfSigner() {
 }
 
 export default function IndependentUserDashboard({ user }) {
+  const router = useRouter()
   return (
     <div className="px-4 py-6 sm:px-0">
       <Card>
@@ -543,6 +544,12 @@ export default function IndependentUserDashboard({ user }) {
             <div className="bg-green-50 p-6 rounded-lg">
               <h3 className="text-lg font-medium text-green-900">I Miei Documenti</h3>
               <p className="text-green-700 mt-2">Qui potrai trovare tutti i documenti che hai caricato o firmato.</p>
+              <Button 
+                className="mt-4 bg-green-600 hover:bg-green-700" 
+                onClick={() => router.push('/i-miei-documenti')}
+              >
+                Vai ai Documenti
+          </Button>
             </div>
             <div className="bg-purple-50 p-6 rounded-lg">
               <h3 className="text-lg font-medium text-purple-900">Notifiche Recenti</h3>
