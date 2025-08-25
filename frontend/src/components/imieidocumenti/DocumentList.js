@@ -80,21 +80,56 @@ export default function DocumentList({ user }) {
 
   // Funzione per eliminare un documento (se implementata nel backend)
   const handleDeleteDocument = async (documentId) => {
-    if (!confirm('Sei sicuro di voler eliminare questo documento?')) {
+    if (!confirm('Sei sicuro di voler eliminare definitivamente questo documento?')) {
       return;
     }
 
     try {
-      await api.delete(`/documents/${documentId}`);
+      console.log(`Eliminazione documento ${documentId}...`);
       
-      // Rimuovi il documento dalla lista locale senza ricaricare tutto
-      setDocuments(prev => prev.filter(doc => doc._id !== documentId));
+      // Chiamata al nuovo endpoint del backend
+      const response = await api.delete(`/doc/delete/${documentId}`);
       
-      console.log('Documento eliminato con successo');
+      if (response.data.success) {
+        // Rimuovi il documento dalla lista locale
+        setDocuments(prev => prev.filter(doc => doc._id !== documentId));
+        
+        // Messaggio di successo
+        alert(`✅ Documento eliminato con successo da: ${response.data.data.deletedFrom.join(', ')}`);
+        console.log('Documento eliminato:', response.data.data);
+        
+      } else {
+        throw new Error(response.data.message || 'Eliminazione fallita');
+      }
+      
     } catch (err) {
       console.error('Errore eliminazione documento:', err);
-      alert('Errore nell\'eliminazione del documento: ' + 
-            (err.response?.data?.message || err.message));
+      
+      let errorMessage = 'Errore nell\'eliminazione del documento';
+      
+      if (err.response?.data) {
+        const errorData = err.response.data;
+        errorMessage = errorData.message || errorMessage;
+        
+        // Gestisci eliminazione parziale (status 207)
+        if (err.response.status === 207 && errorData.data) {
+          errorMessage = `Eliminazione parziale: rimosso da ${errorData.data.deletedFrom.join(', ')}`;
+          // Rimuovi dalla lista se eliminato dal database
+          if (errorData.data.deletedFrom.includes('database')) {
+            setDocuments(prev => prev.filter(doc => doc._id !== documentId));
+          }
+        }
+        
+        // Gestisci errori specifici
+        if (err.response.status === 403) {
+          errorMessage = 'Non hai i permessi per eliminare questo documento (solo Independent Users possono eliminare i propri documenti)';
+        } else if (err.response.status === 404) {
+          errorMessage = 'Documento non trovato';
+          setDocuments(prev => prev.filter(doc => doc._id !== documentId));
+        }
+      }
+      
+      alert(`❌ ${errorMessage}`);
     }
   };
 
@@ -151,7 +186,7 @@ export default function DocumentList({ user }) {
             <CardDescription>
               {documents.length === 0 
                 ? "Non hai ancora caricato documenti" 
-                : `Hai ${documents.length} documento${documents.length !== 1 ? 'i' : ''}`
+                : `Hai ${documents.length} ${documents.length === 1 ? 'documento' : 'documenti'}`
               }
             </CardDescription>
           </div>
