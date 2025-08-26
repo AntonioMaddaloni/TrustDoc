@@ -420,6 +420,289 @@ router
     }
   })
 
+  .get('/download/:id', authLib(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user._id.toString();
+      
+      console.log(`🔍 Richiesta download documento ${id} da utente ${userId}`);
+
+      // ========================
+      // 1. VALIDAZIONE PARAMETRI
+      // ========================
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID documento non fornito'
+        });
+      }
+
+      // ===============================
+      // 2. RECUPERO DOCUMENTO DAL DATABASE
+      // ===============================
+      console.log('📊 Recupero documento dal database...');
+      const document = await DocumentDB.getDocumentById(id);
+      
+      if (!document) {
+        return res.status(404).json({
+          success: false,
+          message: 'Documento non trovato'
+        });
+      }
+
+      console.log(`📄 Documento trovato: ${document.filename}`);
+
+      // ===========================
+      // 3. VERIFICA PERMESSI PROPRIETARIO
+      // ===========================
+      if (document.owner_id.toString() !== userId) {
+        console.log(`❌ Accesso negato: proprietario=${document.owner_id}, richiedente=${userId}`);
+        return res.status(403).json({
+          success: false,
+          message: 'Puoi scaricare solo i tuoi documenti'
+        });
+      }
+
+      console.log('✅ Permessi proprietario verificati');
+
+      // ==============================
+      // 4. VERIFICA STATO NEL DATABASE
+      // ==============================
+      console.log('🔍 Verifica stato documento nel database...');
+      
+      if (document.revoked) {
+        return res.status(410).json({
+          success: false,
+          message: 'Documento revocato nel database',
+          details: {
+            revokedAt: document.revoked_at,
+            reason: 'Document marked as revoked in local database'
+          }
+        });
+      }
+
+      if (document.deleted) {
+        return res.status(410).json({
+          success: false,
+          message: 'Documento eliminato dal database',
+          details: {
+            reason: 'Document marked as deleted in local database'
+          }
+        });
+      }
+
+      console.log('✅ Documento valido nel database');
+
+      // ===============================
+      // 5. VERIFICA STATO SULLA BLOCKCHAIN
+      // ===============================
+      console.log('⛓️ Verifica stato documento sulla blockchain...');
+      
+      if (!document.blockchain_id) {
+        return res.status(422).json({
+          success: false,
+          message: 'Documento non ha un ID blockchain associato',
+          details: {
+            reason: 'Document was not properly stored on blockchain'
+          }
+        });
+      }
+
+      let blockchainDocument;
+      try {
+        // Inizializza blockchain service se necessario
+        if (!blockchainService.initialized) {
+          await blockchainService.initialize();
+        }
+
+        // Recupera documento dalla blockchain
+        blockchainDocument = await blockchainService.getDocument(document.blockchain_id);
+        console.log(`📋 Documento blockchain recuperato - isActive: ${blockchainDocument.isActive}`);
+
+      } catch (blockchainError) {
+        console.error('❌ Errore accesso blockchain:', blockchainError.message);
+        return res.status(503).json({
+          success: false,
+          message: 'Errore verifica blockchain',
+          details: {
+            reason: 'Blockchain service unavailable',
+            error: blockchainError.message
+          }
+        });
+      }
+
+      // Verifica se documento è attivo sulla blockchain
+      if (!blockchainDocument.isActive) {
+        return res.status(410).json({
+          success: false,
+          message: 'Documento revocato sulla blockchain',
+          details: {
+            reason: 'Document marked as inactive/deleted on blockchain',
+            blockchainId: document.blockchain_id
+          }
+        });
+      }
+
+      console.log('✅ Documento attivo sulla blockchain');
+
+      // ================================
+      // 6. VERIFICA INTEGRITÀ HASH TEE
+      // ================================
+      console.log('🔐 Verifica integrità hash TEE...');
+      
+      const dbTeeHash = document.tee_hash;
+      const blockchainTeeHash = blockchainDocument.teeHash;
+      
+      if (!dbTeeHash || !blockchainTeeHash) {
+        return res.status(422).json({
+          success: false,
+          message: 'Hash TEE mancante',
+          details: {
+            reason: 'TEE hash missing in database or blockchain',
+            dbHasHash: !!dbTeeHash,
+            blockchainHasHash: !!blockchainTeeHash
+          }
+        });
+      }
+
+      if (dbTeeHash !== blockchainTeeHash) {
+        console.error(`❌ Hash TEE non corrispondenti:`);
+        console.error(`   Database: ${dbTeeHash}`);
+        console.error(`   Blockchain: ${blockchainTeeHash}`);
+        
+        return res.status(422).json({
+          success: false,
+          message: 'Documento compromesso - Hash TEE non corrispondenti',
+          details: {
+            reason: 'TEE hash mismatch between database and blockchain',
+            integrity: 'COMPROMISED'
+          }
+        });
+      }
+
+      console.log('✅ Hash TEE corrispondenti - integrità verificata');
+
+      // =====================================
+      // 7. VERIFICA ESISTENZA FILE SU IPFS
+      // =====================================
+      console.log('🌐 Verifica esistenza file su IPFS...');
+      
+      if (!document.ipfs_hash) {
+        return res.status(422).json({
+          success: false,
+          message: 'Hash IPFS mancante per il documento',
+          details: {
+            reason: 'IPFS hash not found in database'
+          }
+        });
+      }
+
+      // ===========================
+      // 8. DOWNLOAD FILE DA IPFS
+      // ===========================
+      console.log(`📥 Download file da IPFS (CID: ${document.ipfs_hash})...`);
+      
+      let fileBuffer;
+      try {
+        const ipfsClient = await initIPFS();
+        
+        // Download del file da IPFS
+        const chunks = [];
+        for await (const chunk of ipfsClient.cat(document.ipfs_hash)) {
+          chunks.push(chunk);
+        }
+        fileBuffer = Buffer.concat(chunks);
+        
+        console.log(`✅ File scaricato da IPFS (${fileBuffer.length} bytes)`);
+
+      } catch (ipfsError) {
+        console.error('❌ Errore download IPFS:', ipfsError.message);
+        return res.status(503).json({
+          success: false,
+          message: 'Errore download da IPFS',
+          details: {
+            reason: 'IPFS service unavailable or file not found',
+            ipfsHash: document.ipfs_hash,
+            error: ipfsError.message
+          }
+        });
+      }
+
+      // =========================
+      // 9. VERIFICA FINALE TEE (Opzionale)
+      // =========================
+      console.log('🔒 Verifica finale integrità TEE...');
+      try {
+        const computedTeeHash = await teeService.computeHash(fileBuffer);
+        
+        if (computedTeeHash !== dbTeeHash) {
+          console.error(`❌ Hash TEE del file scaricato non corrisponde:`);
+          console.error(`   Calcolato: ${computedTeeHash}`);
+          console.error(`   Atteso: ${dbTeeHash}`);
+          
+          return res.status(422).json({
+            success: false,
+            message: 'File corrotto - Hash TEE non corrispondente',
+            details: {
+              reason: 'Downloaded file TEE hash does not match stored hash',
+              integrity: 'CORRUPTED'
+            }
+          });
+        }
+        
+        console.log('✅ Integrità finale TEE verificata');
+        
+      } catch (teeError) {
+        console.warn('⚠️ Impossibile verificare hash TEE finale:', teeError.message);
+        // Procediamo comunque se il TEE non è disponibile
+      }
+
+      // ============================
+      // 10. LOG AUDIT DOWNLOAD
+      // ============================
+      console.log('📝 Log audit download...');
+      console.log(`   Documento: ${document.filename}`);
+      console.log(`   Utente: ${userId}`);
+      console.log(`   Timestamp: ${new Date().toISOString()}`);
+      console.log(`   IP: ${req.ip || req.connection.remoteAddress}`);
+
+      // ============================
+      // 11. RESTITUZIONE PDF
+      // ============================
+      console.log('📤 Restituzione file PDF...');
+      
+      // Set headers appropriati per PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Length', fileBuffer.length);
+      res.setHeader('Content-Disposition', `inline; filename="${document.filename}"`);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
+      // Headers custom per tracking
+      res.setHeader('X-Document-ID', document._id.toString());
+      res.setHeader('X-IPFS-Hash', document.ipfs_hash);
+      res.setHeader('X-Blockchain-ID', document.blockchain_id);
+      res.setHeader('X-Verification-Status', 'VERIFIED');
+
+      console.log('✅ Download completato con successo');
+      
+      return res.send(fileBuffer);
+
+    } catch (error) {
+      console.error('❌ Errore generale download:', error);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Errore interno del server durante il download',
+        details: {
+          reason: 'Internal server error',
+          error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        }
+      });
+    }
+  })
+
   // NUOVA ROTTA DELETE COMPLETA PER DOCUMENTI
   .delete('/delete/:id', authLib(), async (req, res) => {
     try {
