@@ -43,7 +43,7 @@ export default function DashboardPage() {
     switch (user.role) {
       case 0: // Super Admin
         // return <SuperAdminDashboard user={user} />;
-        return <p>404</p>; // Placeholder
+        return <CreaOrganizzazione user={user} />; // Placeholder
       case 100: // Organization Admin
         // return <OrganizationAdminDashboard user={user} />;
         return <p>404</p>; // Placeholder
