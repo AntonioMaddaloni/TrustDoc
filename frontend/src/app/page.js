@@ -5,13 +5,22 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 
 export default function Home() {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, loading, user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (!loading) {
       if (isAuthenticated) {
-        router.push("/dashboard")
+        console.log(user)
+        switch (user.role) {
+            case 0: // Super Admin
+              return router.push("/crea-organizzazione")
+            case 100: // Organization Admin
+              return router.push("/dashboard")
+            default: // Independent User e altri casi
+              return router.push("/dashboard")
+          }
+        
       } else {
         router.push("/login")
       }

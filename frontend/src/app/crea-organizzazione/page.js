@@ -6,9 +6,9 @@ import { useEffect } from "react";
 import AppNavbar from "@/components/navbar/AppNavbar";
 
 // Importa i componenti delle dashboard specifiche
-import UserDashboard from "@/components/dashboards/UserDashboard";
+//import UserDashboard from "@/components/dashboards/UserDashboard";
 // Importa gli altri se li hai già creati o li creerai:
-// import SuperAdminDashboard from "@/components/dashboards/SuperAdminDashboard";
+ import CreaOrganizzazione from "@/components/crea-organizzazione/CreaOrganizzazione";
 // import OrganizationAdminDashboard from "@/components/dashboards/OrganizationAdminDashboard";
 
 
@@ -48,7 +48,7 @@ export default function DashboardPage() {
         // return <OrganizationAdminDashboard user={user} />;
         return <p>404</p>; // Placeholder
       default: // Independent User (o qualsiasi altro ruolo non specificato)
-        return <UserDashboard user={user} />;
+        return <p>404</p>;
     }
   };
 
