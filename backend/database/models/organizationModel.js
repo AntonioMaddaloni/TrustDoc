@@ -3,7 +3,7 @@ const { Schema, model, Types } = mongoose;
 
 
 // Definizione dello schema per i documenti
-const documentSchema = new Schema({
+const organizationSchema = new Schema({
   name: {
     type: String,
     required: [true, 'Name is required'],
@@ -21,6 +21,6 @@ const documentSchema = new Schema({
   timestamps: { createdAt: 'create_at', updatedAt: 'updated_at' } // Aggiunge create_at e updated_at automatici
 });
 
-const Orgnizations = model('Organizations', organizationsSchema)
+const Orgnization = model('Organization', organizationSchema)
 
-module.exports = Orgnizations;
+module.exports = Orgnization;
