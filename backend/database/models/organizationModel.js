@@ -8,6 +8,7 @@ const organizationSchema = new Schema({
     type: String,
     required: [true, 'Name is required'],
     trim: true,
+    unique: true,
     minlenght: [2, 'Il nome deve avere almeno 2 caratteri'],
     maxlength: [50, 'Il nome deve avere al massimo 50 caratteri']
   },

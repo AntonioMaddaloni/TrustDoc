@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import api from "@/lib/api"
 
 export default function OrganizationCreator() {
   const [organizationName, setOrganizationName] = useState("")
@@ -23,30 +24,26 @@ export default function OrganizationCreator() {
     setMessageType(null)
 
     try {
-      // Qui inserisci il tuo endpoint
-      const response = await fetch("/api/organizations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: organizationName.trim(),
-        }),
+      const response = await api.post("/admin/organization", {
+        name: organizationName.trim(),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setMessage(`Organizzazione "${organizationName}" creata con successo!`)
-        setMessageType("success")
-        setOrganizationName("") // Reset del form
-      } else {
-        const errorData = await response.json()
-        setMessage(errorData.message || "Errore durante la creazione dell'organizzazione.")
-        setMessageType("error")
-      }
+      setMessage(`Organizzazione "${organizationName}" creata con successo!`)
+      setMessageType("success")
+      setOrganizationName("") // Reset del form
     } catch (error) {
       console.error("Errore nella creazione dell'organizzazione:", error)
-      setMessage("Errore di connessione. Riprova più tardi.")
+      let errorMessage = "Errore durante la creazione dell'organizzazione."
+
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      setMessage(errorMessage)
       setMessageType("error")
     } finally {
       setIsCreating(false)
