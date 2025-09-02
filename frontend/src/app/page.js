@@ -16,7 +16,7 @@ export default function Home() {
             case 0: // Super Admin
               return router.push("/crea-organizzazione")
             case 100: // Organization Admin
-              return router.push("/dashboard")
+              return router.push("/mia-organizzazione")
             default: // Independent User e altri casi
               return router.push("/dashboard")
           }
