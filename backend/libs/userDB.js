@@ -40,6 +40,16 @@ function getUserById(id) { //DO NOT USE FOR ANY ROUTES. ONLY FOR AUTHLIB
     });
 }
 
+function getAllUsersNotAdmin() {
+    return new Promise(async(resolve, reject) => {
+        const users = await User.find({ role_type: { $in: [100, 200]} }).select('-password -__v -updated_at -role_type')
+            .catch((err) => {
+                return reject(err);
+            });
+        resolve(users);
+    });
+}
+
 // NUOVO: Ottieni profilo utente (senza password)
 function getUserProfile(id) {
     return new Promise(async(resolve, reject) => {
@@ -150,4 +160,5 @@ module.exports = {
     updateUserProfile,     // NUOVO
     updateUserPassword,    // NUOVO
     createUser,
+    getAllUsersNotAdmin,
 };

@@ -12,7 +12,29 @@ function createOrganization(info){
     });
 }
 
+function getAllOrganizations(){
+    return new Promise((resolve, reject) => {
+        Organization.find().then((orgs) => {
+            resolve(orgs);
+        }).catch((err) => {
+            reject(err);
+        });
+    });
+}
+
+function getOrganizationById(id){
+    return new Promise((resolve, reject) => {
+        Organization.findOne({ _id: id }).then((orgs) => {
+            resolve(orgs);
+        }).catch((err) => {
+            reject(err);
+        });
+    });
+}
+
 
 module.exports = {
     createOrganization,
+    getAllOrganizations,
+    getOrganizationById,
 };
