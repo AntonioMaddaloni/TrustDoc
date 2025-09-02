@@ -24,7 +24,7 @@ export default function OrganizationCreator() {
     setMessageType(null)
 
     try {
-      const response = await api.post("/admin/organization", {
+      const response = await api.post("/organizations", {
         name: organizationName.trim(),
       })
 

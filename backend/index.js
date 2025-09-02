@@ -30,6 +30,8 @@ console.log("Service URL is " + process.env.SERVICE_URL);
 app.get('/', (req, res) => {
     res.json({ message: 'Hello World !' });
 });
+
+app.use('/admin', require('./routes/adminRoute'));
 app.use('/profile', require('./routes/proRoute'));
 app.use('/doc', require('./routes/docRoute'));
 app.use('/token', require('./routes/tokenRoute'));
