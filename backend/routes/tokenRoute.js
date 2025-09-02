@@ -21,6 +21,10 @@ router
             return res.status(400).json({ message: "Wrong email or password" });
         }
 
+        if((user.role_type == 100) && !(user.organization_id)) {
+            return res.status(400).json({ message: "Wrong email or password" });
+        }
+
         const token = jwt.sign({ id: user._id, role: user.role_type }, process.env.JWT_SECRET, { expiresIn: '1d' });
         const renewToken = jwt.sign({ id: user._id, role: user.role_type, renew: true }, process.env.JWT_SECRET, { expiresIn: '30d' });
         return res.status(200).json({ token, renewToken, role: user.role_type });
