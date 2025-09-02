@@ -20,7 +20,6 @@ router
         if (!(await user.comparePassword(password))) {
             return res.status(400).json({ message: "Wrong email or password" });
         }
-
         if((user.role_type == 100) && !(user.organization_id)) {
             return res.status(400).json({ message: "Wrong email or password" });
         }
