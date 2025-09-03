@@ -19,7 +19,7 @@ export default function MiaOrganizzazionePage() {
   const loadUsers = async () => {
     try {
       setLoading(true)
-      const usersRes = await api.get("/api/my-organization/users")
+      const usersRes = await api.get("/organization/users")
 
       // Handle different response structures
       const usersData = usersRes.data?.data || usersRes.data || []
@@ -34,7 +34,7 @@ export default function MiaOrganizzazionePage() {
   }
 
   const viewUserDetails = (userId) => {
-    router.push(`/utente/${userId}`)
+    router.push(`/mia-organizzazione/utente/${userId}`)
   }
 
   if (loading) {
@@ -68,7 +68,7 @@ export default function MiaOrganizzazionePage() {
                   <div key={userId} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <div className="font-medium">
-                        {user.name} {user.surname}
+                        {user.name} {user.surname} - {user._id}
                       </div>
                       <div className="text-sm text-gray-500">{user.email}</div>
                       {user.role && <div className="text-xs text-blue-600 mt-1">{user.role}</div>}
