@@ -710,6 +710,7 @@ router
   // NUOVA ROTTA DELETE COMPLETA PER DOCUMENTI
   .delete('/delete/:id', authLib(), async (req, res) => {
     try {
+      console.log(req.params.id);
       const { id } = req.params.id;
       const userId = req.user._id.toString();
       const userRole = req.user.role_type;
