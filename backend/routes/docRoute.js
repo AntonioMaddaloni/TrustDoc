@@ -457,8 +457,10 @@ router
       // ===========================
       if (document.owner_id.toString() !== userId) {
         let owner = await UserDB.getUserById(owner_id);
+        console.log('okokoko')
         if(!(owner) || !(owner.organization_id.equals(req.user.organization_id)))
         {
+          console.log('siumsium')
           console.log(`❌ Accesso negato: proprietario=${document.owner_id}, richiedente=${userId}`);
           return res.status(403).json({
             success: false,
