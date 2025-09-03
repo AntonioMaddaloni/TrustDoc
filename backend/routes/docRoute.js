@@ -940,7 +940,7 @@ router
         });
       }
 
-      if(!document.revoke)  {
+      if(!document.revoked)  {
         return res.status(404).json({
           success: false,
           message: 'Documento non trovato'
@@ -1107,14 +1107,13 @@ router
           message: 'Documento non trovato'
         });
       }
-      console.log('1');
-      if(document.revoke)  {
+
+      if(document.revoked)  {
         return res.status(404).json({
           success: false,
           message: 'Documento non trovato'
         });
       }
-      console.log('2');
       // VERIFICA PERMESSI
       if (userRole === 0) {
         return res.status(403).json({
@@ -1122,7 +1121,6 @@ router
           message: 'Gli amministratori non possono revocare documenti. Solo gli utenti indipendenti o gestori possono revocare i documenti.'
         });
       }
-      console.log('3');
       // Verifica che sia il proprietario del documento
       if (document.owner_id.toString() !== userId) {
         let ioowner = await UserDB.getUserById(document.owner_id);
