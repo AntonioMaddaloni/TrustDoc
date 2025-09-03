@@ -12,10 +12,13 @@ export default function UserDocumentsPage({ params }) {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState("")
   const [downloadingId, setDownloadingId] = useState(null)
+  const [revokingId, setRevokingId] = useState(null)
+  const [derevokingId, setDerevokingId] = useState(null) // Nuovo stato per derevoca
   const router = useRouter()
   const userId = params.userId
 
   useEffect(() => {
+    console.log("🔄 useEffect triggered - userId:", userId)
     loadUserDocuments()
   }, [userId])
 
@@ -81,16 +84,25 @@ export default function UserDocumentsPage({ params }) {
 
   const handleDownload = async (document) => {
     const docId = document.id || document._id
+    console.log("Tentativo di download per documento:", docId, document)
     setDownloadingId(docId)
 
     try {
+      console.log("Chiamata API per download...")
       const response = await api.get(`/doc/download/${docId}`, {
         responseType: "blob",
         timeout: 60000,
       })
 
-      const blob = new Blob([response.data], { type: "application/pdf" })
-      let fileName = document.filename || document.fileName || "documento.pdf"
+      console.log("Risposta ricevuta:", response)
+      console.log("Headers:", response.headers)
+      console.log("Data type:", typeof response.data)
+      console.log("Data size:", response.data.size)
+
+      const contentType = response.headers['content-type'] || 'application/octet-stream'
+      const blob = new Blob([response.data], { type: contentType })
+      
+      let fileName = document.filename || document.fileName || document.title || "documento"
 
       const contentDisposition = response.headers["content-disposition"]
       if (contentDisposition) {
@@ -100,19 +112,102 @@ export default function UserDocumentsPage({ params }) {
         }
       }
 
+      if (!fileName.includes('.')) {
+        const extension = contentType.includes('pdf') ? '.pdf' : 
+                         contentType.includes('image') ? '.jpg' : 
+                         contentType.includes('text') ? '.txt' : '.bin'
+        fileName += extension
+      }
+
+      console.log("Nome file finale:", fileName)
+
       const downloadUrl = window.URL.createObjectURL(blob)
       const link = window.document.createElement("a")
       link.href = downloadUrl
       link.download = fileName
+      link.style.display = 'none'
       window.document.body.appendChild(link)
       link.click()
-      window.document.body.removeChild(link)
-      window.URL.revokeObjectURL(downloadUrl)
+      
+      setTimeout(() => {
+        window.document.body.removeChild(link)
+        window.URL.revokeObjectURL(downloadUrl)
+      }, 100)
+
+      setMessage("Download completato con successo")
+      setTimeout(() => setMessage(""), 3000)
+      
     } catch (error) {
-      console.error("Errore download:", error)
-      setMessage("Errore durante il download del documento")
+      console.error("Errore completo download:", error)
+      console.error("Errore response:", error.response)
+      console.error("Errore message:", error.message)
+      console.error("Errore status:", error.response?.status)
+      
+      let errorMessage = "Errore durante il download del documento"
+      if (error.response?.status === 404) {
+        errorMessage = "Documento non trovato"
+      } else if (error.response?.status === 403) {
+        errorMessage = "Non hai i permessi per scaricare questo documento"
+      } else if (error.response?.status === 401) {
+        errorMessage = "Sessione scaduta, effettua nuovamente il login"
+      }
+      
+      setMessage(errorMessage)
     } finally {
       setDownloadingId(null)
+    }
+  }
+
+  // Funzione per revocare un documento
+  const handleRevoke = async (document) => {
+    const docId = document.id || document._id
+    setRevokingId(docId)
+
+    try {
+      const response = await api.delete(`/doc/revoke/${docId}`)
+      
+      setDocuments(prevDocuments => 
+        prevDocuments.map(doc => 
+          (doc.id || doc._id) === docId 
+            ? { ...doc, revoked: true, revoked_at: new Date() }
+            : doc
+        )
+      )
+
+      setMessage("Documento revocato con successo")
+      setTimeout(() => setMessage(""), 3000)
+    } catch (error) {
+      console.error("Errore revoca:", error)
+      setMessage("Errore durante la revoca del documento")
+    } finally {
+      setRevokingId(null)
+    }
+  }
+
+  // NUOVA FUNZIONE per derevocare un documento
+  const handleDerevoke = async (document) => {
+    const docId = document.id || document._id
+    setDerevokingId(docId)
+
+    try {
+      const response = await api.put(`/doc/derevoke/${docId}`)
+      
+      // Aggiorna lo stato locale del documento
+      setDocuments(prevDocuments => 
+        prevDocuments.map(doc => 
+          (doc.id || doc._id) === docId 
+            ? { ...doc, revoked: false, revoked_at: null }
+            : doc
+        )
+      )
+
+      setMessage("Documento riattivato con successo")
+      setTimeout(() => setMessage(""), 3000)
+    } catch (error) {
+      console.error("Errore derevoca:", error)
+      setMessage("Errore durante la riattivazione del documento")
+    } finally {
+      setDerevokingId(null)
     }
   }
 
@@ -150,7 +245,15 @@ export default function UserDocumentsPage({ params }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {message && <div className="p-3 rounded-md bg-red-100 text-red-800 border border-red-200">{message}</div>}
+          {message && (
+            <div className={`p-3 rounded-md border ${
+              message.includes("successo") 
+                ? "bg-green-100 text-green-800 border-green-200"
+                : "bg-red-100 text-red-800 border-red-200"
+            }`}>
+              {message}
+            </div>
+          )}
 
           {documents.length === 0 ? (
             <div className="text-center py-12">
@@ -172,6 +275,8 @@ export default function UserDocumentsPage({ params }) {
               {documents.map((document) => {
                 const docId = document.id || document._id
                 const isDownloading = downloadingId === docId
+                const isRevoking = revokingId === docId
+                const isDerevokingDocument = derevokingId === docId
 
                 return (
                   <Card key={docId} className="hover:shadow-lg transition-shadow duration-200">
@@ -189,6 +294,11 @@ export default function UserDocumentsPage({ params }) {
                             {document.signatureMetadata?.hasSingnature && (
                               <span className="inline-block mt-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
                                 ✓ Firmato
+                              </span>
+                            )}
+                            {document.revoked && (
+                              <span className="inline-block mt-1 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
+                                ✗ Revocato
                               </span>
                             )}
                           </div>
@@ -223,9 +333,16 @@ export default function UserDocumentsPage({ params }) {
                             <span className="font-medium">{formatDate(document.signatureMetadata.timestamp)}</span>
                           </div>
                         )}
+
+                        {document.revoked_at && (
+                          <div className="flex justify-between">
+                            <span>Revocato il:</span>
+                            <span className="font-medium">{formatDate(document.revoked_at)}</span>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="flex justify-center mt-4 pt-4 border-t">
+                      <div className="flex justify-center gap-2 mt-4 pt-4 border-t">
                         <Button
                           size="sm"
                           variant="outline"
@@ -242,6 +359,45 @@ export default function UserDocumentsPage({ params }) {
                             "Scarica"
                           )}
                         </Button>
+                        
+                        {/* LOGICA MODIFICATA DEI PULSANTI */}
+                        {!document.revoked ? (
+                          // Documento NON revocato - Mostra pulsante Revoca
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRevoke(document)}
+                            disabled={isRevoking}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            {isRevoking ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                                Revocando...
+                              </>
+                            ) : (
+                              "Revoca"
+                            )}
+                          </Button>
+                        ) : (
+                          // Documento REVOCATO - Mostra pulsante Attiva
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDerevoke(document)}
+                            disabled={isDerevokingDocument}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            {isDerevokingDocument ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                                Attivando...
+                              </>
+                            ) : (
+                              "Attiva"
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
