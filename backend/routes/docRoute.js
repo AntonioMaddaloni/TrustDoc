@@ -475,7 +475,7 @@ router
       console.log('🔍 Verifica stato documento nel database...');
       
       if (document.revoked) {
-        return res.status(410).json({
+        return res.status(412).json({
           success: false,
           message: 'Documento revocato nel database',
           details: {
