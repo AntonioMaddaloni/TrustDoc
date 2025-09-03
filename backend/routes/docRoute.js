@@ -456,11 +456,15 @@ router
       // 3. VERIFICA PERMESSI PROPRIETARIO
       // ===========================
       if (document.owner_id.toString() !== userId) {
-        console.log(`❌ Accesso negato: proprietario=${document.owner_id}, richiedente=${userId}`);
-        return res.status(403).json({
-          success: false,
-          message: 'Puoi scaricare solo i tuoi documenti'
-        });
+        let owner = await UserDB.getUserById(owner_id);
+        if(!(owner) || !(owner.organization_id.equals(req.user.organization_id)))
+        {
+          console.log(`❌ Accesso negato: proprietario=${document.owner_id}, richiedente=${userId}`);
+          return res.status(403).json({
+            success: false,
+            message: 'Puoi scaricare solo i tuoi documenti'
+          });
+        }
       }
 
       console.log('✅ Permessi proprietario verificati');
