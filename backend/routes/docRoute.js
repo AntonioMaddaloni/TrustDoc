@@ -905,7 +905,7 @@ router
   })
 
   // NUOVA ROTTA ATTIVAZIONE COMPLETA PER DOCUMENTI
-  .delete('/derevoke/:id', authLib(), async (req, res) => {
+  .put('/derevoke/:id', authLib(), async (req, res) => {
     try {
       const id = req.params.id;
       const userId = req.user._id.toString();
