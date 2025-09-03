@@ -486,7 +486,7 @@ router
       }
 
       if (document.deleted) {
-        return res.status(410).json({
+        return res.status(412).json({
           success: false,
           message: 'Documento eliminato dal database',
           details: {
@@ -503,7 +503,7 @@ router
       console.log('⛓️ Verifica stato documento sulla blockchain...');
       
       if (!document.blockchain_id) {
-        return res.status(422).json({
+        return res.status(404).json({
           success: false,
           message: 'Documento non ha un ID blockchain associato',
           details: {
@@ -537,7 +537,7 @@ router
 
       // Verifica se documento è attivo sulla blockchain
       if (!blockchainDocument.isActive) {
-        return res.status(410).json({
+        return res.status(412).json({
           success: false,
           message: 'Documento revocato sulla blockchain',
           details: {
