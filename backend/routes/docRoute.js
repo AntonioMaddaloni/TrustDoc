@@ -714,7 +714,7 @@ router
       const { id } = req.params.id;
       const userId = req.user._id.toString();
       const userRole = req.user.role_type;
-      
+      console.log(id);
       console.log(`Richiesta eliminazione completa documento ${id} da utente ${userId} (ruolo: ${userRole})`);
    
       
