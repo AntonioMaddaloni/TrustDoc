@@ -904,6 +904,342 @@ router
     }
   })
 
+  // NUOVA ROTTA ATTIVAZIONE COMPLETA PER DOCUMENTI
+  .delete('/derevoke/:id', authLib(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user._id.toString();
+      const userRole = req.user.role_type;
+      
+      console.log(`Richiesta revoca completa documento ${id} da utente ${userId} (ruolo: ${userRole})`);
+   
+      
+      // Validazione ID
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID documento non fornito'
+        });
+      }
+      
+      // Trova il documento nel database
+      const document = await DocumentDB.getDocumentById(id);
+      
+        console.log('=== DEBUG OWNERSHIP ===');
+        console.log('req.user:', req.user);
+        console.log('userId ricavato:', req.user?.id || req.user?._id);
+        console.log('document.owner_id:', document.owner_id);
+        console.log('Tipi:', typeof document.owner_id, 'vs', typeof (req.user?.id || req.user?._id));
+        console.log('Confronto strict:', document.owner_id === (req.user?.id || req.user?._id));
+        console.log('Confronto loose:', document.owner_id == (req.user?.id || req.user?._id));
+
+      if (!document) {
+        return res.status(404).json({
+          success: false,
+          message: 'Documento non trovato'
+        });
+      }
+
+      if(!document.revoke)  {
+        return res.status(404).json({
+          success: false,
+          message: 'Documento non trovato'
+        });
+      }
+      
+      // VERIFICA PERMESSI
+      if (userRole === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Gli amministratori non possono attivare documenti. Solo gli utenti indipendenti o gestori possono attivare i documenti.'
+        });
+      }
+      
+      // Verifica che sia il proprietario del documento
+      if (document.owner_id.toString() !== userId) {
+        let ioowner = await UserDB.getUserById(document.owner_id);
+        if(!(ioowner) || !(ioowner.organization_id.equals(req.user.organization_id)) || (req.user.role_type != 100))
+        {
+          return res.status(403).json({
+            success: false,
+            message: 'Non puoi attivare questo documento'
+          });
+        }
+      }
+      
+      console.log(`Permessi verificati per documento: ${document.filename}`);
+      
+      // Risultati delle attivazioni
+      const deletionResults = {
+        database: false,
+        blockchain: false,
+        errors: []
+      };
+      
+      // 1. attivazione DAL DATABASE
+      try {
+        console.log('Attivazione dal database...');
+        const dbResult = await DocumentDB.derevokeDocument(id);
+        deletionResults.database = !!dbResult;
+        console.log(`Database: ${deletionResults.database ? 'SUCCESS' : 'FAILED'}`);
+      } catch (dbError) {
+        console.error('Errore database:', dbError.message);
+        deletionResults.errors.push(`Database: ${dbError.message}`);
+      }
+      
+      // 2. attivazione DA IPFS non dev'essere fatta
+      
+      // 3. ATTIVAZIONE DALLA BLOCKCHAIN
+      if (document.blockchain_id) {
+        try {
+          console.log(`attivazione dalla blockchain (ID: ${document.blockchain_id})...`);
+          
+          // Inizializza il servizio blockchain
+          if (!blockchainService.initialized) {
+            await blockchainService.initialize();
+          }
+          
+          // attivazione del documento sulla blockchain
+          const blockchainResult = await blockchainService.restoreDocument(document.blockchain_id);
+          
+          deletionResults.blockchain = blockchainResult.success;
+          console.log('Blockchain: SUCCESS', blockchainResult);
+          
+        } catch (blockchainError) {
+          console.error('Errore Blockchain:', blockchainError.message);
+          deletionResults.errors.push(`Blockchain: ${blockchainError.message}`);
+        }
+      } else {
+        deletionResults.blockchain = true; // Nessun ID blockchain da attivare
+        console.log('Blockchain: Nessun ID da attivare');
+      }
+      
+      // RISPOSTA FINALE
+      const allSuccess = deletionResults.database && deletionResults.blockchain;
+      const successCount = [deletionResults.database, deletionResults.blockchain].filter(Boolean).length;
+      
+      if (allSuccess) {
+        console.log('Attivazione completa riuscita!');
+        return res.json({
+          success: true,
+          message: 'Documento attivato completamente da tutti i sistemi',
+          data: {
+            documentId: id,
+            fileName: document.filename,
+            deletedFrom: ['database', 'blockchain'],
+            details: deletionResults
+          }
+        });
+      } else if (successCount > 0) {
+        console.log(`Attivazione parziale: ${successCount}/2 sistemi`);
+        return res.status(207).json({ // 207 Multi-Status
+          success: false,
+          message: `Attivazione parziale completata (${successCount}/2 sistemi)`,
+          data: {
+            documentId: id,
+            fileName: document.filename,
+            deletedFrom: [
+              deletionResults.database ? 'database' : null,
+              deletionResults.blockchain ? 'blockchain' : null
+            ].filter(Boolean),
+            details: deletionResults,
+            errors: deletionResults.errors
+          }
+        });
+      } else {
+        console.log('Attivazione fallita completamente');
+        return res.status(500).json({
+          success: false,
+          message: 'Attivazione fallita su tutti i sistemi',
+          data: {
+            documentId: id,
+            fileName: document.filename,
+            deletedFrom: [],
+            details: deletionResults,
+            errors: deletionResults.errors
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.error('Errore generale attivazione documento:', error);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Errore interno del server durante l\'attivazione',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  })
+
+  // NUOVA ROTTA REVOCA COMPLETA PER DOCUMENTI
+  .delete('/revoke/:id', authLib(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user._id.toString();
+      const userRole = req.user.role_type;
+      
+      console.log(`Richiesta revoca completa documento ${id} da utente ${userId} (ruolo: ${userRole})`);
+   
+      
+      // Validazione ID
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID documento non fornito'
+        });
+      }
+      
+      // Trova il documento nel database
+      const document = await DocumentDB.getDocumentById(id);
+      
+        console.log('=== DEBUG OWNERSHIP ===');
+        console.log('req.user:', req.user);
+        console.log('userId ricavato:', req.user?.id || req.user?._id);
+        console.log('document.owner_id:', document.owner_id);
+        console.log('Tipi:', typeof document.owner_id, 'vs', typeof (req.user?.id || req.user?._id));
+        console.log('Confronto strict:', document.owner_id === (req.user?.id || req.user?._id));
+        console.log('Confronto loose:', document.owner_id == (req.user?.id || req.user?._id));
+
+      if (!document) {
+        return res.status(404).json({
+          success: false,
+          message: 'Documento non trovato'
+        });
+      }
+
+      if(document.revoke)  {
+        return res.status(404).json({
+          success: false,
+          message: 'Documento non trovato'
+        });
+      }
+      
+      // VERIFICA PERMESSI
+      if (userRole === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Gli amministratori non possono revocare documenti. Solo gli utenti indipendenti o gestori possono revocare i documenti.'
+        });
+      }
+      
+      // Verifica che sia il proprietario del documento
+      if (document.owner_id.toString() !== userId) {
+        let ioowner = await UserDB.getUserById(document.owner_id);
+        if(!(ioowner) || !(ioowner.organization_id.equals(req.user.organization_id)) || (req.user.role_type != 100))
+        {
+          return res.status(403).json({
+            success: false,
+            message: 'Non puoi revocare questo documento'
+          });
+        }
+      }
+      
+      console.log(`Permessi verificati per documento: ${document.filename}`);
+      
+      // Risultati delle revoche
+      const deletionResults = {
+        database: false,
+        blockchain: false,
+        errors: []
+      };
+      
+      // 1. Revoca DAL DATABASE
+      try {
+        console.log('Revoca dal database...');
+        const dbResult = await DocumentDB.revokeDocument(id);
+        deletionResults.database = !!dbResult;
+        console.log(`Database: ${deletionResults.database ? 'SUCCESS' : 'FAILED'}`);
+      } catch (dbError) {
+        console.error('Errore database:', dbError.message);
+        deletionResults.errors.push(`Database: ${dbError.message}`);
+      }
+      
+      // 2. Revoca DA IPFS non dev'essere fatta
+      
+      // 3. SOFT DELETE DALLA BLOCKCHAIN
+      if (document.blockchain_id) {
+        try {
+          console.log(`Soft delete dalla blockchain (ID: ${document.blockchain_id})...`);
+          
+          // Inizializza il servizio blockchain
+          if (!blockchainService.initialized) {
+            await blockchainService.initialize();
+          }
+          
+          // Soft delete del documento sulla blockchain
+          const blockchainResult = await blockchainService.softDeleteDocument(document.blockchain_id);
+          
+          deletionResults.blockchain = blockchainResult.success;
+          console.log('Blockchain: SUCCESS', blockchainResult);
+          
+        } catch (blockchainError) {
+          console.error('Errore Blockchain:', blockchainError.message);
+          deletionResults.errors.push(`Blockchain: ${blockchainError.message}`);
+        }
+      } else {
+        deletionResults.blockchain = true; // Nessun ID blockchain da revocare
+        console.log('Blockchain: Nessun ID da revocare');
+      }
+      
+      // RISPOSTA FINALE
+      const allSuccess = deletionResults.database && deletionResults.blockchain;
+      const successCount = [deletionResults.database, deletionResults.blockchain].filter(Boolean).length;
+      
+      if (allSuccess) {
+        console.log('Revoca completa riuscita!');
+        return res.json({
+          success: true,
+          message: 'Documento revocato completamente da tutti i sistemi',
+          data: {
+            documentId: id,
+            fileName: document.filename,
+            deletedFrom: ['database', 'blockchain'],
+            details: deletionResults
+          }
+        });
+      } else if (successCount > 0) {
+        console.log(`Revoca parziale: ${successCount}/2 sistemi`);
+        return res.status(207).json({ // 207 Multi-Status
+          success: false,
+          message: `Revoca parziale completata (${successCount}/2 sistemi)`,
+          data: {
+            documentId: id,
+            fileName: document.filename,
+            deletedFrom: [
+              deletionResults.database ? 'database' : null,
+              deletionResults.blockchain ? 'blockchain' : null
+            ].filter(Boolean),
+            details: deletionResults,
+            errors: deletionResults.errors
+          }
+        });
+      } else {
+        console.log('Revoca fallita completamente');
+        return res.status(500).json({
+          success: false,
+          message: 'Revoca fallita su tutti i sistemi',
+          data: {
+            documentId: id,
+            fileName: document.filename,
+            deletedFrom: [],
+            details: deletionResults,
+            errors: deletionResults.errors
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.error('Errore generale revoca documento:', error);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Errore interno del server durante l\'revoca',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  })
+
   .get('/my', authLib(), async (req, res) => { //tutti lo possono fare, infatti posso prendere solo i miei di documenti, quindi non serve una restrizione, ma solo autenticazione
     try{
       let docs = await DocumentDB.getMyDocuments(req.user._id);

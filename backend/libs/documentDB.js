@@ -67,10 +67,34 @@ function deleteDocument(id) {
     });
 }
 
+function revokeDocument(id) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const result = await Document.findByIdAndUpdate(id,{ revoked: true, revoked_at: Date.now() },{ new: true });
+            resolve(result !== null);
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
+function derevokeDocument(id) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const result = await Document.findByIdAndUpdate(id,{ revoked: false },{ new: true });
+            resolve(result !== null);
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
 module.exports = {
     getDocumentById,
     getMyDocuments, 
     getDocumentsByMyOrganizationUser,
     createDocument,
-    deleteDocument
+    deleteDocument,
+    revokeDocument,
+    derevokeDocument
 };
