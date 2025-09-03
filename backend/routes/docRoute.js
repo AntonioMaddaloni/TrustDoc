@@ -422,7 +422,7 @@ router
 
   .get('/download/:id', authLib(), async (req, res) => {
     try {
-      const { id } = req.params.id;
+      const id = req.params.id;
       const userId = req.user._id.toString();
       
       console.log(`🔍 Richiesta download documento ${id} da utente ${userId}`);
@@ -710,11 +710,10 @@ router
   // NUOVA ROTTA DELETE COMPLETA PER DOCUMENTI
   .delete('/delete/:id', authLib(), async (req, res) => {
     try {
-      console.log(req.params.id);
-      const { id } = req.params.id;
+      const id = req.params.id;
       const userId = req.user._id.toString();
       const userRole = req.user.role_type;
-      console.log(id);
+
       console.log(`Richiesta eliminazione completa documento ${id} da utente ${userId} (ruolo: ${userRole})`);
    
       
@@ -908,7 +907,7 @@ router
   // NUOVA ROTTA ATTIVAZIONE COMPLETA PER DOCUMENTI
   .delete('/derevoke/:id', authLib(), async (req, res) => {
     try {
-      const { id } = req.params.id;
+      const id = req.params.id;
       const userId = req.user._id.toString();
       const userRole = req.user.role_type;
       
@@ -1076,7 +1075,7 @@ router
   // NUOVA ROTTA REVOCA COMPLETA PER DOCUMENTI
   .delete('/revoke/:id', authLib(), async (req, res) => {
     try {
-      const { id } = req.params.id;
+      const id = req.params.id;
       const userId = req.user._id.toString();
       const userRole = req.user.role_type;
       
