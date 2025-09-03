@@ -32,6 +32,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/admin', require('./routes/adminRoute'));
+app.use('/organization', require('./routes/organizationRoute'));
 app.use('/profile', require('./routes/proRoute'));
 app.use('/doc', require('./routes/docRoute'));
 app.use('/token', require('./routes/tokenRoute'));
