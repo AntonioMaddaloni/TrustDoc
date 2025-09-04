@@ -117,9 +117,9 @@ Dopo il caricamento:
 Ogni documento caricato sarà visibile con le seguenti opzioni:
 
 - `Download`: scarica PDF firmato
-- `Revoca`: revoca certificato via blockchain (NON PER UTENTI INMDIPENDENTI)
+- `Revoca`: revoca certificato via blockchain (NON PER UTENTI INDIPENDENTI / SOLO ORGANIZZAZIONE)
 - `Eliminazione`: rimuove documento dall'interfaccia e dal DB locale
-- `Revoca + Eliminazione`: combina entrambe le azioni (NON PER UTENTI INMDIPENDENTI)
+- `Revoca + Eliminazione`: combina entrambe le azioni (NON PER UTENTI INDIPENDENTI / SOLO ORGANIZZAZIONE)
 
 > ⚠️ La **revoca senza eliminazione** è utile per tracciare certificati invalidati a fini legali/amministrativi.
 
@@ -162,7 +162,7 @@ Gestisce la **propria** organizzazione:
 - Sezione "Gestione Utenti":
   - Visualizza tutti gli utenti associati
   - Accede ai PDF firmati dei dipendenti
-  - Revoca/elimina documenti in caso di errore
+  - Revoca documenti in caso di errore
 
 ---
 
@@ -183,9 +183,9 @@ Gestisce la **propria** organizzazione:
 | Frontend           | Next.js + Tailwind CSS    |
 | Backend            | Node.js + Express         |
 | Database           | MongoDB                   |
-| Blockchain         | Ethereum (Smart Contracts)|
+| Blockchain         | Ethereum (HardHat)        |
 | Storage distribuito| IPFS                      |
-| Sicurezza Firma    | TEE (es. OpenEnclave) |
+| Sicurezza Firma    | TEE (OpenEnclave)         |
 | Autenticazione     | JWT + Bcrypt              |
 
 ---
