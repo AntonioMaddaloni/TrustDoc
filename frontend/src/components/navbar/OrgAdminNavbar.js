@@ -9,6 +9,7 @@ export default function UserNavbar({ user, onLogout }) {
         <div className="flex justify-between h-16">
           <div className="flex items-center space-x-8">
             <Link href="/mia-organizzazione" className="font-medium text-gray-700">Mia Organizzazione</Link>
+            <Link href="/profilo" className="font-medium text-gray-500">Profilo</Link>
           </div>
           <div className="flex items-center space-x-4">
             <span>Benvenuto, {user.name}</span>
