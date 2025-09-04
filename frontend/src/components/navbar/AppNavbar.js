@@ -20,7 +20,7 @@ export default function AppNavbar() {
   };
 
   // Usa uno switch per decidere quale Navbar renderizzare
-  switch (user.role_type) {
+  switch (user.role) {
     case 0: // Super Admin
       return <SuperAdminNavbar {...commonProps} />;
     case 100: // Organization Admin

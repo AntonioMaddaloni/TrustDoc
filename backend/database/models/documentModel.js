@@ -39,6 +39,11 @@ const documentSchema = new Schema({
     trim: true,
     default: null // Identificativo univoco della transazione in blockchain
   },
+  tee_hash: {
+    type: String,
+    trim: true,
+    default: null // Identificativo univoco del tee_hash
+  },
   revoked: {
     type: Boolean,
     default: false // Indica se il documento è stato revocato

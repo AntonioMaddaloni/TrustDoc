@@ -31,6 +31,10 @@ app.get('/', (req, res) => {
     res.json({ message: 'Hello World !' });
 });
 
+app.use('/admin', require('./routes/adminRoute'));
+app.use('/organization', require('./routes/organizationRoute'));
+app.use('/profile', require('./routes/proRoute'));
+app.use('/doc', require('./routes/docRoute'));
 app.use('/token', require('./routes/tokenRoute'));
 app.use('/user', require('./routes/userRoute'));
 //FINE DICHIARAZIONE DELLE ROTTE

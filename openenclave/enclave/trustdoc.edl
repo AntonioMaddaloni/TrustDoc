@@ -1,0 +1,15 @@
+// Copyright (c) Open Enclave SDK contributors.
+// Licensed under the MIT License.
+
+enclave {
+    from "openenclave/edl/syscall.edl" import *;
+    from "platform.edl" import *;
+
+    trusted {
+        public void compute_sha256([in, size=data_size] uint8_t* data,
+                                   size_t data_size,
+                                   [out, size=hash_size] uint8_t* hash,
+                                   size_t hash_size);
+    };
+
+};

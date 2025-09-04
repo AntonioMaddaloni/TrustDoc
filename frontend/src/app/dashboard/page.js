@@ -40,13 +40,13 @@ export default function DashboardPage() {
       return null; // O un fallback se l'oggetto user non è ancora disponibile
     }
 
-    switch (user.role_type) {
+    switch (user.role) {
       case 0: // Super Admin
         // return <SuperAdminDashboard user={user} />;
-        return <p>Dashboard Super Admin in sviluppo...</p>; // Placeholder
+        return <p>404</p>; // Placeholder
       case 100: // Organization Admin
         // return <OrganizationAdminDashboard user={user} />;
-        return <p>Dashboard Organization Admin in sviluppo...</p>; // Placeholder
+        return <p>404</p>; // Placeholder
       default: // Independent User (o qualsiasi altro ruolo non specificato)
         return <UserDashboard user={user} />;
     }
