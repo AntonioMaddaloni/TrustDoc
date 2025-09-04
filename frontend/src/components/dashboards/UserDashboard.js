@@ -531,12 +531,6 @@ export default function IndependentUserDashboard({ user }) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-blue-50 p-6 rounded-lg">
               <h3 className="text-lg font-medium text-blue-900">Il Mio Profilo</h3>
-              <p className="text-blue-700 mt-2">
-                <strong>Nome:</strong> {user?.name} {user?.surname}
-              </p>
-              <p className="text-blue-700">
-                <strong>Email:</strong> {user?.email}
-              </p>
               <p className="text-blue-700">
                 <strong>Ruolo:</strong> Independent User
               </p>
