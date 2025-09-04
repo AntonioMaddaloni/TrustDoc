@@ -13,8 +13,8 @@ import api from "@/lib/api";
 
 export default function ProfilePage() {
   const { user, isAuthenticated, loading } = useAuth();
+  console.log('Dati utente dal contesto Auth:', user);
   const router = useRouter();
-
   // Stati per i dati del profilo
   const [profileData, setProfileData] = useState({
     name: '',
@@ -71,13 +71,15 @@ export default function ProfilePage() {
     try {
       setIsLoadingProfile(true);
       const response = await api.get('/profile/profile');
-      
       if (response.data.success) {
         const userData = response.data.data;
         setProfileData({
           name: userData.name || '',
           surname: userData.surname || '',
-          email: userData.email || ''
+          email: userData.email || '',
+          created_at: userData.created_at || '',
+          updated_at: userData.updated_at || '',
+          organization_id: userData.organization_id || ''
         });
       } else {
         setMessage({ type: 'error', text: response.data.message });
@@ -95,8 +97,8 @@ export default function ProfilePage() {
 
   // Determina il tipo di utente per la visualizzazione
   const getUserStatus = () => {
-    const roleType = user?.role_type;
-    
+    const roleType = user?.role;
+    console.log('Ruolo utente:', roleType);
     switch (roleType) {
       case 0:
         return {
@@ -476,42 +478,6 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Informazioni Aggiuntive */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Informazioni Account</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-gray-700">ID Utente:</span>
-                  <span className="ml-2 text-gray-600 font-mono">{user?._id}</span>
-                </div>
-                
-                {user?.organization_id && (
-                  <div>
-                    <span className="font-medium text-gray-700">ID Organizzazione:</span>
-                    <span className="ml-2 text-gray-600 font-mono">{user.organization_id}</span>
-                  </div>
-                )}
-                
-                <div>
-                  <span className="font-medium text-gray-700">Account creato:</span>
-                  <span className="ml-2 text-gray-600">
-                    {user?.created_at ? new Date(user.created_at).toLocaleDateString('it-IT') : 'Non disponibile'}
-                  </span>
-                </div>
-                
-                <div>
-                  <span className="font-medium text-gray-700">Ultimo aggiornamento:</span>
-                  <span className="ml-2 text-gray-600">
-                    {user?.updated_at ? new Date(user.updated_at).toLocaleDateString('it-IT') : 'Non disponibile'}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </main>
     </div>

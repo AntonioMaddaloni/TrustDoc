@@ -11,6 +11,7 @@ export default function UserNavbar({ user, onLogout }) {
             <Link href="/crea-organizzazione" className="font-medium text-gray-700">Crea Organizzazione</Link>
             <Link href="/crea-utente" className="font-medium text-gray-500">Crea Utente</Link>
             <Link href="/collega-utenti" className="font-medium text-gray-500">Collega Utenti</Link>
+            <Link href="/profilo" className="font-medium text-gray-500">Profilo</Link>
           </div>
           <div className="flex items-center space-x-4">
             <span>Benvenuto, {user.name}</span>

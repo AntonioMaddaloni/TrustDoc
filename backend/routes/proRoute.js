@@ -52,7 +52,7 @@ router
                     email: user.email,
                     role_type: user.role_type,
                     organization_id: user.organization_id,
-                    created_at: user.created_at,
+                    create_at: user.create_at,
                     updated_at: user.updated_at,
                     status: {
                         type: userStatus,
