@@ -1,3 +1,7 @@
+# Autori
+- Francesco Peluso;
+- Antonio Maddaloni;
+- Antonio De Lucia.
 
 # 🛡️ TrustDoc
 
