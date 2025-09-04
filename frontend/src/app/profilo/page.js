@@ -110,9 +110,7 @@ export default function ProfilePage() {
       case 100:
         return {
           type: 'Amministratore Organizzazione',
-          detail: user?.organization_id 
-            ? `Amministri l'organizzazione` 
-            : 'Amministratore senza organizzazione assegnata',
+          detail: `Amministri l'organizzazione`,
           badge: 'bg-blue-100 text-blue-800',
           icon: '🏢'
         };
